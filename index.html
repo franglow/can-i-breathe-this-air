@@ -7,11 +7,11 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main>
-    <h1>Can I Breathe This Air?</h1>
-    <div id="info-message" style="display:none; margin:0.5em 0;"></div>
-    <p id="status">Loading air quality data...</p>
-
+  <main class="card">
+    <img src="image-resources/cloud-happy.svg" alt="Happy cloud" class="cloud-img" />
+    <h1 class="main-title">Can I Breathe<br>This Air?</h1>
+    <div id="info-message" class="info-message"></div>
+    <p id="status" class="status-box"></p>
     <section class="manual-input">
       <input type="text" id="city-input" placeholder="Enter city or area..." />
       <button id="check-btn">Check Air Quality</button>
