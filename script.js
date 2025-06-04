@@ -8,14 +8,22 @@ function success(position) {
   const latitude = position.coords.latitude;
   const longitude = position.coords.longitude;
 
-  const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`;
+  const reverseGeocodeURL = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${API_KEY}`;
 
-  fetch(url)
-    .then((response) => response.json())
-    .then((data) => {
-      const aqi = data.list[0].main.aqi;
-      const message = interpretAQI(aqi);
-      document.getElementById("status").textContent = message;
+  fetch(reverseGeocodeURL)
+    .then(res => res.json())
+    .then(locationData => {
+      const city = locationData[0]?.name || 'Your area';
+
+      const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`;
+
+      fetch(url)
+        .then(response => response.json())
+        .then((data) => {
+          const aqi = data.list[0].main.aqi;
+          const message = interpretAQI(aqi);
+          document.getElementById("status").textContent = `${city}: ${message}`;
+        });
     })
     .catch(() => {
       document.getElementById("status").textContent = "Failed to load air quality data.";
@@ -43,3 +51,40 @@ function interpretAQI(aqi) {
       return "🤷 Air quality data unavailable.";
   }
 }
+
+document.getElementById("check-btn").addEventListener("click", () => {
+  const city = document.getElementById("city-input").value.trim();
+  if (!city) return;
+
+  let resolvedCity = ""; // <-- Move this outside
+
+  // Get coordinates using OpenWeather Geocoding API
+  fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${API_KEY}`)
+    .then((response) => response.json())
+    .then((geoData) => {
+      if (!geoData.length) {
+        document.getElementById("status").textContent = "City not found.";
+        return;
+      }
+
+      const { lat, lon } = geoData[0];
+      resolvedCity = geoData[0].name;
+      const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`;
+
+      return fetch(url);
+    })
+    .then((response) => response?.json())
+    .then((data) => {
+      if (!data?.list?.length) {
+        document.getElementById("status").textContent = "No AQI data found.";
+        return;
+      }
+
+      const aqi = data.list[0].main.aqi;
+      const message = interpretAQI(aqi);
+      document.getElementById("status").textContent = `${resolvedCity}: AQI Level ${aqi} — ${message}`;
+    })
+    .catch(() => {
+      document.getElementById("status").textContent = "Failed to load city air quality data.";
+    });
+});
