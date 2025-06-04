@@ -54,3 +54,31 @@ footer a {
   text-decoration: none;
   color: #444;
 }
+
+.loader {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid #ccc;
+  border-top: 2px solid #333;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#info-message {
+  display: none;
+  color: #0074d9;
+  font-size: 1em;
+  margin-bottom: 0.5em;
+  transition: opacity 0.2s;
+}
+#info-message.active {
+  display: block;
+  opacity: 1;
+}
