@@ -68,6 +68,25 @@ if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
   statusEl.textContent = 'Warning: For your security, please use this site over HTTPS.';
 }
 
+// Country code to full name lookup using Intl.DisplayNames (fallback to object if not supported)
+let countryNameLookup;
+if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
+  const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+  countryNameLookup = code => displayNames.of(code) || code;
+} else {
+  // Fallback for environments without Intl.DisplayNames
+  const countryMap = {
+    US: 'United States',
+    DE: 'Germany',
+    FR: 'France',
+    GB: 'United Kingdom',
+    ES: 'Spain',
+    IT: 'Italy',
+    // ...add more as needed
+  };
+  countryNameLookup = code => countryMap[code] || code;
+}
+
 // Update this with the user's current location
 navigator.geolocation.getCurrentPosition((position) => {
   const latitude = position.coords.latitude;
@@ -104,6 +123,9 @@ function fetchGeolocationData(position) {
     .then(locationData => {
       if (!locationData.length) throw new Error('Location not found');
       const city = locationData[0]?.name || 'Your area';
+      const country = locationData[0]?.country || '';
+      const countryFull = country ? countryNameLookup(country) : '';
+      const cityCountry = countryFull ? `${city}, ${countryFull}` : city;
       const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`;
       return fetch(url).then(response => {
         if (!response.ok) throw new Error('Air quality fetch failed');
@@ -112,10 +134,10 @@ function fetchGeolocationData(position) {
         if (!data?.list?.length) throw new Error('No AQI data found');
         const aqi = data.list[0].main.aqi;
         const message = interpretAQI(aqi);
-        const statusMsg = `${city}: ${message}`;
+        const statusMsg = `${cityCountry}: AQI Level ${aqi} — ${message}`;
         setCache(cacheKey, statusMsg);
         statusEl.textContent = statusMsg;
-        // clearInfoMessage(); // Removed to keep info message persistent
+        // Optionally, update info message with cityCountry if needed
       });
     })
     .catch((err) => {
@@ -124,7 +146,6 @@ function fetchGeolocationData(position) {
       else if (err.message === 'No AQI data found') msg = "No AQI data found for your area.";
       else if (err.message === 'Reverse geocoding failed' || err.message === 'Air quality fetch failed') msg = "API error. Please try again later.";
       statusEl.textContent = msg;
-      // clearInfoMessage(); // Removed to keep info message persistent
     })
     .finally(() => {
       hideSpinner();
@@ -189,8 +210,9 @@ checkBtnEl.addEventListener("click", () => {
     })
     .then((geoData) => {
       if (!geoData.length) throw new Error('City not found');
-      const { lat, lon } = geoData[0];
-      resolvedCity = geoData[0].name;
+      const { lat, lon, name, country } = geoData[0];
+      resolvedCity = name;
+      resolvedCountry = country;
       const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`;
       return fetch(url);
     })
@@ -202,10 +224,11 @@ checkBtnEl.addEventListener("click", () => {
       if (!data?.list?.length) throw new Error('No AQI data found');
       const aqi = data.list[0].main.aqi;
       const message = interpretAQI(aqi);
-      const statusMsg = `${resolvedCity}: AQI Level ${aqi} — ${message}`;
+      const countryFull = resolvedCountry ? countryNameLookup(resolvedCountry) : '';
+      const cityCountry = countryFull ? `${resolvedCity}, ${countryFull}` : resolvedCity;
+      const statusMsg = `${cityCountry}: AQI Level ${aqi} — ${message}`;
       setCache(cacheKey, statusMsg);
       statusEl.textContent = statusMsg;
-      // clearInfoMessage(); // Removed to keep info message persistent
     })
     .catch((err) => {
       let msg = "Failed to load city air quality data.";
@@ -217,7 +240,6 @@ checkBtnEl.addEventListener("click", () => {
       else if (err.message === 'No AQI data found') msg = "No AQI data found for this city.";
       else if (err.message === 'Geocoding failed' || err.message === 'Air quality fetch failed') msg = "API error. Please try again later.";
       statusEl.textContent = msg;
-      // clearInfoMessage(); // Removed to keep info message persistent
     })
     .finally(() => {
       hideSpinner();
