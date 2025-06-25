@@ -1,3 +1,5 @@
 name = "my-air-backend"
 main = "src/index.js"
 compatibility_date = "2025-06-25"
+[vars]
+AIR_API_KEY = "cd93ab5cc0bb6e9f206896a81d54b36a"

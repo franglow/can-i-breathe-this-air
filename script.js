@@ -84,6 +84,16 @@ if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
   countryNameLookup = code => countryMap[code] || code;
 }
 
+// Helper to get backend URL based on environment
+function getBackendUrl(lat, lon) {
+  // Use local backend if running on localhost, else use deployed Worker
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const base = isLocal
+    ? 'http://localhost:8787'
+    : 'https://my-air-backend.francortez.workers.dev';
+  return `${base}/?lat=${lat}&lon=${lon}`;
+}
+
 // Get user's current location and fetch AQI data using backend
 navigator.geolocation.getCurrentPosition((position) => {
   const latitude = position.coords.latitude;
@@ -123,8 +133,8 @@ function fetchGeolocationData(position) {
       const country = locationData[0]?.country || '';
       const countryFull = country ? countryNameLookup(country) : '';
       const cityCountry = countryFull ? `${city}, ${countryFull}` : city;
-      // Fetch AQI from Cloudflare Worker backend
-      const url = `https://my-air-backend.francortez.workers.dev?lat=${latitude}&lon=${longitude}`;
+      // Fetch AQI from backend (dev/prod switch)
+      const url = getBackendUrl(latitude, longitude);
       return fetch(url).then(response => {
         if (!response.ok) throw new Error('Air quality fetch failed');
         return response.json();
@@ -210,8 +220,8 @@ checkBtnEl.addEventListener("click", () => {
       const { lat, lon, name, country } = geoData[0];
       const resolvedCity = name;
       const resolvedCountry = country;
-      // Fetch AQI from Cloudflare Worker backend
-      const url = `https://my-air-backend.francortez.workers.dev?lat=${lat}&lon=${lon}`;
+      // Fetch AQI from backend (dev/prod switch)
+      const url = getBackendUrl(lat, lon);
       return fetch(url);
     })
     .then((response) => {

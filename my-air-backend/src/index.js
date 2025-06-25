@@ -17,6 +17,11 @@ export default {
     if (!lat || !lon) {
       return new Response("Missing latitude or longitude", { status: 400 });
     }
+
+console.log("env object keys:", Object.keys(env));
+console.log("env.AIR_API_KEY value:", env.AIR_API_KEY);
+console.log("API KEY BELOW:");
+console.log("API KEY PRESENT:", !!env.AIR_API_KEY);
     const apiKey = env.AIR_API_KEY;
     const apiUrl = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`;
 
