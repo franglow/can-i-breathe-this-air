@@ -214,34 +214,44 @@ checkBtnEl.addEventListener("click", () => {
   setInfoMessage('Getting air quality data for the entered city...');
   showSpinner();
   checkBtnEl.disabled = true;
-  // Get coordinates using OpenWeather Geocoding API (no API key needed for demo)
+  // Get coordinates using OpenWeather Geocoding API
   fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${OPENWEATHER_API_KEY}`)
     .then((response) => {
-      if (!response.ok) throw new Error('Geocoding failed');
+      if (!response.ok) {
+        console.error('Geocoding fetch failed:', response.status, response.statusText);
+        throw new Error('Geocoding failed');
+      }
       return response.json();
     })
     .then((geoData) => {
-      if (!geoData.length) throw new Error('City not found');
+      if (!geoData.length) {
+        console.error('Geocoding returned empty array for city:', city);
+        throw new Error('City not found');
+      }
       const { lat, lon, name, country } = geoData[0];
       const resolvedCity = name;
       const resolvedCountry = country;
       // Fetch AQI from backend (dev/prod switch)
       const url = getBackendUrl(lat, lon);
-      return fetch(url);
-    })
-    .then((response) => {
-      if (!response.ok) throw new Error('Air quality fetch failed');
-      return response.json();
-    })
-    .then((data) => {
-      if (!data?.list?.length) throw new Error('No AQI data found');
-      const aqi = data.list[0].main.aqi;
-      const message = interpretAQI(aqi);
-      const countryFull = resolvedCountry ? countryNameLookup(resolvedCountry) : '';
-      const cityCountry = countryFull ? `${resolvedCity}, ${countryFull}` : resolvedCity;
-      const statusMsg = `${cityCountry}: AQI Level ${aqi} — ${message}`;
-      setCache(cacheKey, statusMsg);
-      statusEl.textContent = statusMsg;
+      return fetch(url).then((response) => {
+        if (!response.ok) {
+          console.error('AQI backend fetch failed:', response.status, response.statusText);
+          throw new Error('Air quality fetch failed');
+        }
+        return response.json();
+      }).then((data) => {
+        if (!data?.list?.length) {
+          console.error('AQI backend returned no data:', data);
+          throw new Error('No AQI data found');
+        }
+        const aqi = data.list[0].main.aqi;
+        const message = interpretAQI(aqi);
+        const countryFull = resolvedCountry ? countryNameLookup(resolvedCountry) : '';
+        const cityCountry = countryFull ? `${resolvedCity}, ${countryFull}` : resolvedCity;
+        const statusMsg = `${cityCountry}: AQI Level ${aqi} — ${message}`;
+        setCache(cacheKey, statusMsg);
+        statusEl.textContent = statusMsg;
+      });
     })
     .catch((err) => {
       let msg = "Failed to load city air quality data.";
@@ -251,8 +261,11 @@ checkBtnEl.addEventListener("click", () => {
         return;
       }
       else if (err.message === 'No AQI data found') msg = "No AQI data found for this city.";
-      else if (err.message === 'Geocoding failed' || err.message === 'Air quality fetch failed') msg = "API error. Please try again later.";
+      else if (err.message === 'Geocoding failed') msg = "Geocoding failed. Check your API key and network.";
+      else if (err.message === 'Air quality fetch failed') msg = "AQI backend fetch failed. Check backend logs.";
       statusEl.textContent = msg;
+      // Log the error for debugging
+      console.error('City search error:', err);
     })
     .finally(() => {
       hideSpinner();
