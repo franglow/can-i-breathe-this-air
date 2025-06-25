@@ -94,6 +94,11 @@ function getBackendUrl(lat, lon) {
   return `${base}/?lat=${lat}&lon=${lon}`;
 }
 
+const OPENWEATHER_API_KEY = 'cd93ab5cc0bb6e9f206896a81d54b36a'; // <-- Set your real API key here
+if (!OPENWEATHER_API_KEY || OPENWEATHER_API_KEY === 'YOUR_REAL_OPENWEATHERMAP_API_KEY') {
+  console.warn('OpenWeatherMap API key is not set. Please set OPENWEATHER_API_KEY in script.js.');
+}
+
 // Get user's current location and fetch AQI data using backend
 navigator.geolocation.getCurrentPosition((position) => {
   const latitude = position.coords.latitude;
@@ -117,7 +122,7 @@ function fetchGeolocationData(position) {
   const cacheKey = getCacheKey('geo', `${latitude},${longitude}`);
 
   // Use OpenWeather reverse geocoding only for city/country name
-  const reverseGeocodeURL = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=demo`;
+  const reverseGeocodeURL = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${OPENWEATHER_API_KEY}`;
 
   showSpinner();
   checkBtnEl.disabled = true;
@@ -210,7 +215,7 @@ checkBtnEl.addEventListener("click", () => {
   showSpinner();
   checkBtnEl.disabled = true;
   // Get coordinates using OpenWeather Geocoding API (no API key needed for demo)
-  fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=demo`)
+  fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${OPENWEATHER_API_KEY}`)
     .then((response) => {
       if (!response.ok) throw new Error('Geocoding failed');
       return response.json();

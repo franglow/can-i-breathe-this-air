@@ -15,13 +15,16 @@ export default {
     const lon = searchParams.get("lon");
 
     if (!lat || !lon) {
-      return new Response("Missing latitude or longitude", { status: 400 });
+      return new Response("Missing latitude or longitude", {
+        status: 400,
+        headers: { "Access-Control-Allow-Origin": "*" },
+      });
     }
 
-console.log("env object keys:", Object.keys(env));
-console.log("env.AIR_API_KEY value:", env.AIR_API_KEY);
-console.log("API KEY BELOW:");
-console.log("API KEY PRESENT:", !!env.AIR_API_KEY);
+    console.log("env object keys:", Object.keys(env));
+    console.log("env.AIR_API_KEY value:", env.AIR_API_KEY);
+    console.log("API KEY BELOW:");
+    console.log("API KEY PRESENT:", !!env.AIR_API_KEY);
     const apiKey = env.AIR_API_KEY;
     const apiUrl = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`;
 
@@ -29,7 +32,10 @@ console.log("API KEY PRESENT:", !!env.AIR_API_KEY);
     const data = await response.json();
 
     return new Response(JSON.stringify(data), {
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
     });
   },
 };
