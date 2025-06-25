@@ -1,6 +1,3 @@
-// Replace this with your real API key
-const API_KEY = "be4794190ef234a77d7f3c74d4fdc88d";
-
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes in ms
 const aqiCache = {};
 
@@ -87,7 +84,7 @@ if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
   countryNameLookup = code => countryMap[code] || code;
 }
 
-// Update this with the user's current location
+// Get user's current location and fetch AQI data using backend
 navigator.geolocation.getCurrentPosition((position) => {
   const latitude = position.coords.latitude;
   const longitude = position.coords.longitude;
@@ -109,9 +106,9 @@ function fetchGeolocationData(position) {
   const longitude = position.coords.longitude;
   const cacheKey = getCacheKey('geo', `${latitude},${longitude}`);
 
-  const reverseGeocodeURL = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${API_KEY}`;
+  // Use OpenWeather reverse geocoding only for city/country name
+  const reverseGeocodeURL = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=demo`;
 
-  // Show spinner and disable button
   showSpinner();
   checkBtnEl.disabled = true;
   statusEl.textContent = 'Loading air quality data...';
@@ -126,7 +123,8 @@ function fetchGeolocationData(position) {
       const country = locationData[0]?.country || '';
       const countryFull = country ? countryNameLookup(country) : '';
       const cityCountry = countryFull ? `${city}, ${countryFull}` : city;
-      const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`;
+      // Fetch AQI from Cloudflare Worker backend
+      const url = `https://my-air-backend.francortez.workers.dev?lat=${latitude}&lon=${longitude}`;
       return fetch(url).then(response => {
         if (!response.ok) throw new Error('Air quality fetch failed');
         return response.json();
@@ -137,7 +135,6 @@ function fetchGeolocationData(position) {
         const statusMsg = `${cityCountry}: AQI Level ${aqi} — ${message}`;
         setCache(cacheKey, statusMsg);
         statusEl.textContent = statusMsg;
-        // Optionally, update info message with cityCountry if needed
       });
     })
     .catch((err) => {
@@ -202,8 +199,8 @@ checkBtnEl.addEventListener("click", () => {
   setInfoMessage('Getting air quality data for the entered city...');
   showSpinner();
   checkBtnEl.disabled = true;
-  // Get coordinates using OpenWeather Geocoding API
-  fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${API_KEY}`)
+  // Get coordinates using OpenWeather Geocoding API (no API key needed for demo)
+  fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=demo`)
     .then((response) => {
       if (!response.ok) throw new Error('Geocoding failed');
       return response.json();
@@ -211,9 +208,10 @@ checkBtnEl.addEventListener("click", () => {
     .then((geoData) => {
       if (!geoData.length) throw new Error('City not found');
       const { lat, lon, name, country } = geoData[0];
-      resolvedCity = name;
-      resolvedCountry = country;
-      const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`;
+      const resolvedCity = name;
+      const resolvedCountry = country;
+      // Fetch AQI from Cloudflare Worker backend
+      const url = `https://my-air-backend.francortez.workers.dev?lat=${lat}&lon=${lon}`;
       return fetch(url);
     })
     .then((response) => {
