@@ -2,7 +2,7 @@
 
 ## Description
 
-A modern web app to check air quality (AQI) by city or geolocation. The frontend is static (HTML/CSS/JS) and the backend is a secure proxy (Cloudflare Worker) that protects the API key and optimizes performance.
+Modern web application to check air quality (AQI) by city or geolocation. The frontend is static (HTML/CSS/JS) and the backend is a secure proxy (Cloudflare Worker) that protects the API key and optimizes performance.
 
 ---
 
@@ -23,7 +23,7 @@ A modern web app to check air quality (AQI) by city or geolocation. The frontend
 - Accessible, responsive, and fast UI.
 - Persistent and in-memory cache (frontend and backend).
 - Security: API key is never exposed to the user.
-- Loading indicators and clear status messages.
+- Loading indicators and clear user messages.
 - Automated frontend and backend tests.
 
 ## Technologies
@@ -77,7 +77,7 @@ A modern web app to check air quality (AQI) by city or geolocation. The frontend
 - Automated tests with mocks and jsdom for UI and logic.
 
 ## Deployment
-- **Frontend:** Cloudflare Pages (connect the repo and deploy the root).
+- **Frontend:** Cloudflare Pages (connect the repo and deploy the root directory).
 - **Backend:** Cloudflare Workers (`npx wrangler deploy` in `my-air-backend`).
 - Set the API key as a secret in production (`npx wrangler secret put AIR_API_KEY`).
 
@@ -90,16 +90,16 @@ MIT
 
 ---
 
-### Efficiency & Best Practices Notes (2025)
+### Efficiency Notes & Best Practices (2025)
 - **Local and Worker cache** to minimize latency and API usage.
 - **Async/await** and robust error handling throughout the app.
-- **Accessibility:** ARIA, keyboard support, clear messages.
-- **Testing:** Automated coverage for frontend and backend.
-- **Security:** API key never exposed, secure CORS.
-- **Scalability:** Stateless Worker, easy to scale globally.
-- **Clean, modular code:** easy to maintain and extend.
+- **Accessibility**: ARIA, keyboard support, clear messages.
+- **Testing**: Automated coverage for frontend and backend.
+- **Security**: API key never exposed, secure CORS.
+- **Scalability**: Stateless Worker, easy to scale globally.
+- **Clean, modular code**: easy to maintain and extend.
 
 ---
 
 **Summary:**
-Efficient, secure, and modern project—ready for production and easy to maintain or scale.
+Efficient, secure, and modern project, production-ready and easy to maintain or scale.
