@@ -4,5 +4,6 @@
     "vitest": "^3.2.0",
     "jsdom": "^24.0.0"
   },
-  "type": "module"
+  "type": "module",
+  "version": "1.0.0"
 }

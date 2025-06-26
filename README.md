@@ -1,5 +1,23 @@
 # Can I Breathe This Air?
 
+## Version
+
+- **1.0.0** (2025-06-26): Initial public release (vanilla JS, Cloudflare Worker backend, full test coverage, production-ready).
+- **2.0.0** (planned): Migration to a modern JS framework (React, Vue, Svelte, etc.), improved architecture, and new features.
+
+---
+
+## Changelog
+
+### 1.0.0 (2025-06-26)
+- First stable release: vanilla JS frontend, Cloudflare Worker backend, persistent/in-memory cache, accessibility, automated tests, and production deployment instructions.
+
+### 2.0.0 (planned)
+- Migration to a modern JS framework.
+- Refactored architecture and new features.
+
+---
+
 ## Description
 
 Modern web application to check air quality (AQI) by city or geolocation. The frontend is static (HTML/CSS/JS) and the backend is a secure proxy (Cloudflare Worker) that protects the API key and optimizes performance.
