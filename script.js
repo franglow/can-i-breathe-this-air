@@ -4,6 +4,7 @@ const aqiCache = {};
 // Persistent cache using localStorage
 function setCache(key, data) {
   aqiCache[key] = { data, timestamp: Date.now() };
+  cleanupCache(); // Clean up expired entries before saving
   try {
     localStorage.setItem('aqiCache', JSON.stringify(aqiCache));
   } catch (e) {}
@@ -20,11 +21,31 @@ function getCache(key) {
       }
     } catch (e) {}
   }
+  cleanupCache(); // Clean up expired entries on every get
   const entry = aqiCache[key];
   if (entry && (Date.now() - entry.timestamp < CACHE_DURATION)) {
     return entry.data;
   }
   return null;
+}
+
+function cleanupCache() {
+  const now = Date.now();
+  let changed = false;
+  for (const key in aqiCache) {
+    if (aqiCache.hasOwnProperty(key)) {
+      const entry = aqiCache[key];
+      if (!entry || (now - entry.timestamp >= CACHE_DURATION)) {
+        delete aqiCache[key];
+        changed = true;
+      }
+    }
+  }
+  if (changed) {
+    try {
+      localStorage.setItem('aqiCache', JSON.stringify(aqiCache));
+    } catch (e) {}
+  }
 }
 
 function getCacheKey(type, value) {
@@ -108,47 +129,40 @@ navigator.geolocation.getCurrentPosition((position) => {
   setInfoMessage('Getting air quality data for your current location...');
   showSpinner();
   checkBtnEl.disabled = true;
-  setTimeout(() => fetchGeolocationData(position), 100); // Ensure message is rendered before fetch
+  setTimeout(() => fetchGeolocationDataAsync(position), 100); // Ensure message is rendered before fetch
 }, error);
 
-function fetchGeolocationData(position) {
+async function fetchGeolocationDataAsync(position) {
   const latitude = position.coords.latitude;
   const longitude = position.coords.longitude;
   const cacheKey = getCacheKey('geo', `${latitude},${longitude}`);
-
-  // Fetch city/country name and AQI from backend
-  const url = getBackendUrl(latitude, longitude) + '&details=1'; // details=1 tells backend to include city/country
-
+  const url = getBackendUrl(latitude, longitude) + '&details=1';
   showSpinner();
   checkBtnEl.disabled = true;
   statusEl.textContent = 'Loading air quality data...';
-  fetch(url)
-    .then(res => {
-      if (!res.ok) throw new Error('Backend fetch failed');
-      return res.json();
-    })
-    .then(data => {
-      if (!data?.list?.length) throw new Error('No AQI data found');
-      const aqi = data.list[0].main.aqi;
-      const city = data.city || 'Your area';
-      const country = data.country || '';
-      const countryFull = country ? countryNameLookup(country) : '';
-      const cityCountry = countryFull ? `${city}, ${countryFull}` : city;
-      const message = interpretAQI(aqi);
-      const statusMsg = `${cityCountry}: AQI Level ${aqi} — ${message}`;
-      setCache(cacheKey, statusMsg);
-      statusEl.textContent = statusMsg;
-    })
-    .catch((err) => {
-      let msg = "Failed to load air quality data.";
-      if (err.message === 'No AQI data found') msg = "No AQI data found for your area.";
-      else if (err.message === 'Backend fetch failed') msg = "API error. Please try again later.";
-      statusEl.textContent = msg;
-    })
-    .finally(() => {
-      hideSpinner();
-      checkBtnEl.disabled = false;
-    });
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Backend fetch failed');
+    const data = await res.json();
+    if (!data?.list?.length) throw new Error('No AQI data found');
+    const aqi = data.list[0].main.aqi;
+    const city = data.city || 'Your area';
+    const country = data.country || '';
+    const countryFull = country ? countryNameLookup(country) : '';
+    const cityCountry = countryFull ? `${city}, ${countryFull}` : city;
+    const message = interpretAQI(aqi);
+    const statusMsg = `${cityCountry}: AQI Level ${aqi} — ${message}`;
+    setCache(cacheKey, statusMsg);
+    statusEl.textContent = statusMsg;
+  } catch (err) {
+    let msg = "Failed to load air quality data.";
+    if (err.message === 'No AQI data found') msg = "No AQI data found for your area.";
+    else if (err.message === 'Backend fetch failed') msg = "API error. Please try again later.";
+    statusEl.textContent = msg;
+  } finally {
+    hideSpinner();
+    checkBtnEl.disabled = false;
+  }
 }
 
 function error() {
@@ -176,7 +190,7 @@ function interpretAQI(aqi) {
 let lastCheckTime = 0;
 const CHECK_THROTTLE_MS = 10 * 1000; // 10 seconds
 
-checkBtnEl.addEventListener("click", () => {
+checkBtnEl.addEventListener("click", async () => {
   const now = Date.now();
   if (now - lastCheckTime < CHECK_THROTTLE_MS) {
     statusEl.textContent = `Please wait a few seconds before checking again.`;
@@ -206,39 +220,35 @@ checkBtnEl.addEventListener("click", () => {
     ? 'http://localhost:8787'
     : 'https://my-air-backend.francortez.workers.dev';
   const url = `${base}/?city=${encodeURIComponent(city)}&details=1`;
-  fetch(url)
-    .then((response) => {
-      if (!response.ok) {
-        console.error('Backend fetch failed:', response.status, response.statusText);
-        throw new Error('Backend fetch failed');
-      }
-      return response.json();
-    })
-    .then((data) => {
-      if (!data?.list?.length) {
-        console.error('Backend returned no data:', data);
-        throw new Error('No AQI data found');
-      }
-      const aqi = data.list[0].main.aqi;
-      const cityName = data.city || city;
-      const country = data.country || '';
-      const countryFull = country ? countryNameLookup(country) : '';
-      const cityCountry = countryFull ? `${cityName}, ${countryFull}` : cityName;
-      const message = interpretAQI(aqi);
-      const statusMsg = `${cityCountry}: AQI Level ${aqi} — ${message}`;
-      setCache(cacheKey, statusMsg);
-      statusEl.textContent = statusMsg;
-    })
-    .catch((err) => {
-      let msg = "Failed to load city air quality data.";
-      if (err.message === 'No AQI data found') msg = "No AQI data found for this city.";
-      else if (err.message === 'Backend fetch failed') msg = "API error. Please try again later.";
-      statusEl.textContent = msg;
-      // Log the error for debugging
-      console.error('City search error:', err);
-    })
-    .finally(() => {
-      hideSpinner();
-      checkBtnEl.disabled = false;
-    });
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error('Backend fetch failed:', response.status, response.statusText);
+      throw new Error('Backend fetch failed');
+    }
+    const data = await response.json();
+    if (!data?.list?.length) {
+      console.error('Backend returned no data:', data);
+      throw new Error('No AQI data found');
+    }
+    const aqi = data.list[0].main.aqi;
+    const cityName = data.city || city;
+    const country = data.country || '';
+    const countryFull = country ? countryNameLookup(country) : '';
+    const cityCountry = countryFull ? `${cityName}, ${countryFull}` : cityName;
+    const message = interpretAQI(aqi);
+    const statusMsg = `${cityCountry}: AQI Level ${aqi} — ${message}`;
+    setCache(cacheKey, statusMsg);
+    statusEl.textContent = statusMsg;
+  } catch (err) {
+    let msg = "Failed to load city air quality data.";
+    if (err.message === 'No AQI data found') msg = "No AQI data found for this city.";
+    else if (err.message === 'Backend fetch failed') msg = "API error. Please try again later.";
+    statusEl.textContent = msg;
+    // Log the error for debugging
+    console.error('City search error:', err);
+  } finally {
+    hideSpinner();
+    checkBtnEl.disabled = false;
+  }
 });
