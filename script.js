@@ -228,3 +228,25 @@ checkBtnEl.addEventListener("click", async () => {
   const url = `${base}/?city=${encodeURIComponent(city)}&details=1`;
   fetchAndDisplayAQI({ url, cacheKey, fallbackCity: city });
 });
+
+// Add ARIA attributes and improve accessibility
+cityInputEl.setAttribute('aria-label', 'City or area');
+cityInputEl.setAttribute('autocomplete', 'off');
+cityInputEl.setAttribute('role', 'textbox');
+cityInputEl.setAttribute('aria-required', 'true');
+cityInputEl.setAttribute('aria-describedby', 'info-message');
+
+checkBtnEl.setAttribute('aria-label', 'Check Air Quality');
+checkBtnEl.setAttribute('role', 'button');
+
+statusEl.setAttribute('role', 'status');
+statusEl.setAttribute('aria-live', 'polite');
+
+infoEl.setAttribute('role', 'alert');
+
+// Keyboard accessibility: allow Enter key to trigger button
+cityInputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    checkBtnEl.click();
+  }
+});
