@@ -11,13 +11,21 @@
     <img src="image-resources/cloud-happy.svg" alt="Happy cloud" class="cloud-img" />
     <h1 class="main-title">Can I Breathe<br>This Air?</h1>
     <div id="info-message" class="info-message"></div>
-    <p id="status" class="status-box"></p>
+    <div id="status" class="status-box" role="region" aria-live="polite"></div>
     <section class="manual-input">
-      <input type="text" id="city-input" placeholder="Enter city or area..." />
-      <button id="check-btn">Check Air Quality</button>
+      <input
+        type="text"
+        id="city-input"
+        placeholder="Enter a city or area"
+        aria-label="City or area"
+        autocomplete="off"
+        role="textbox"
+        aria-required="true"
+        aria-describedby="info-message"
+      />
+      <button id="check-btn" role="button" aria-label="Check Air Quality">Check</button>
     </section>
   </main>
-
   <script src="script.js"></script>
 </body>
 </html>
