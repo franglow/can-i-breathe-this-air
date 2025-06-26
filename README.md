@@ -1,37 +1,37 @@
 # Can I Breathe This Air?
 
-## Descripción
+## Description
 
-Aplicación web moderna para consultar la calidad del aire (AQI) por ciudad o geolocalización. El frontend es estático (HTML/CSS/JS) y el backend es un proxy seguro (Cloudflare Worker) que protege la API key y optimiza el rendimiento.
+A modern web app to check air quality (AQI) by city or geolocation. The frontend is static (HTML/CSS/JS) and the backend is a secure proxy (Cloudflare Worker) that protects the API key and optimizes performance.
 
 ---
 
-## Tabla de Contenidos
-- [Características](#características)
-- [Tecnologías](#tecnologías)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Instalación y Uso](#instalación-y-uso)
+## Table of Contents
+- [Features](#features)
+- [Technologies](#technologies)
+- [Project Structure](#project-structure)
+- [Installation & Usage](#installation--usage)
 - [Testing](#testing)
-- [Despliegue](#despliegue)
-- [Contribución](#contribución)
-- [Licencia](#licencia)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## Características
-- Consulta AQI por ciudad o ubicación actual.
-- UI accesible, responsiva y rápida.
-- Caché persistente y en memoria (frontend y backend).
-- Seguridad: la API key nunca se expone al usuario.
-- Indicadores de carga y mensajes claros.
-- Pruebas automáticas frontend y backend.
+## Features
+- Check AQI by city or current location.
+- Accessible, responsive, and fast UI.
+- Persistent and in-memory cache (frontend and backend).
+- Security: API key is never exposed to the user.
+- Loading indicators and clear status messages.
+- Automated frontend and backend tests.
 
-## Tecnologías
-- **Frontend:** HTML5, CSS3, JavaScript ES6+, [Vitest](https://vitest.dev/) + jsdom para testing.
-- **Backend:** Cloudflare Workers (ESM), Wrangler, [Vitest](https://vitest.dev/) para testing.
-- **Infraestructura:** Cloudflare Pages (frontend), Cloudflare Workers (backend).
+## Technologies
+- **Frontend:** HTML5, CSS3, JavaScript ES6+, [Vitest](https://vitest.dev/) + jsdom for testing.
+- **Backend:** Cloudflare Workers (ESM), Wrangler, [Vitest](https://vitest.dev/) for testing.
+- **Infrastructure:** Cloudflare Pages (frontend), Cloudflare Workers (backend).
 
-## Estructura del Proyecto
+## Project Structure
 ```
 ├── index.html
 ├── style.css
@@ -47,23 +47,23 @@ Aplicación web moderna para consultar la calidad del aire (AQI) por ciudad o ge
 └── README.md
 ```
 
-## Instalación y Uso
-1. **Clona el repositorio y entra al directorio:**
+## Installation & Usage
+1. **Clone the repository and enter the directory:**
    ```sh
    git clone <repo-url>
    cd can-i-breathe-this-air
    ```
-2. **Instala dependencias (frontend):**
+2. **Install frontend dependencies:**
    ```sh
    npm install
    ```
-3. **Instala dependencias backend:**
+3. **Install backend dependencies:**
    ```sh
    cd my-air-backend && npm install
    ```
-4. **Desarrollo local:**
-   - Frontend: abre `index.html` en tu navegador o usa un servidor estático.
-   - Backend: en `my-air-backend`, ejecuta `npx wrangler dev`.
+4. **Local development:**
+   - Frontend: open `index.html` in your browser or use a static server.
+   - Backend: in `my-air-backend`, run `npx wrangler dev`.
 
 ## Testing
 - **Frontend:**
@@ -74,32 +74,32 @@ Aplicación web moderna para consultar la calidad del aire (AQI) por ciudad o ge
   ```sh
   cd my-air-backend && npm test
   ```
-- Pruebas automáticas con mocks y jsdom para UI y lógica.
+- Automated tests with mocks and jsdom for UI and logic.
 
-## Despliegue
-- **Frontend:** Cloudflare Pages (conecta el repo y despliega la raíz).
-- **Backend:** Cloudflare Workers (`npx wrangler deploy` en `my-air-backend`).
-- Configura la API key como secreto en producción (`npx wrangler secret put AIR_API_KEY`).
+## Deployment
+- **Frontend:** Cloudflare Pages (connect the repo and deploy the root).
+- **Backend:** Cloudflare Workers (`npx wrangler deploy` in `my-air-backend`).
+- Set the API key as a secret in production (`npx wrangler secret put AIR_API_KEY`).
 
-## Contribución
-- Pull requests y issues bienvenidos.
-- Sigue el estilo de código y agrega pruebas para nuevas funcionalidades.
+## Contributing
+- Pull requests and issues are welcome.
+- Follow the code style and add tests for new features.
 
-## Licencia
+## License
 MIT
 
 ---
 
-### Notas de Eficiencia y Buenas Prácticas (2025)
-- **Caché local y en Worker** para minimizar latencia y uso de API.
-- **Async/await** y manejo de errores robusto en toda la app.
-- **Accesibilidad**: ARIA, soporte teclado, mensajes claros.
-- **Testing**: Cobertura automatizada frontend y backend.
-- **Seguridad**: API key nunca expuesta, CORS seguro.
-- **Escalabilidad**: Worker stateless, fácil de escalar globalmente.
-- **Código limpio y modular**: fácil de mantener y extender.
+### Efficiency & Best Practices Notes (2025)
+- **Local and Worker cache** to minimize latency and API usage.
+- **Async/await** and robust error handling throughout the app.
+- **Accessibility:** ARIA, keyboard support, clear messages.
+- **Testing:** Automated coverage for frontend and backend.
+- **Security:** API key never exposed, secure CORS.
+- **Scalability:** Stateless Worker, easy to scale globally.
+- **Clean, modular code:** easy to maintain and extend.
 
 ---
 
-**Resumen:**
-Proyecto eficiente, seguro y moderno, listo para producción y fácil de mantener o escalar.
+**Summary:**
+Efficient, secure, and modern project—ready for production and easy to maintain or scale.
