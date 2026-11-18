@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   airQualityForCity,
   airQualityForCoords,
+  airQualityForIp,
+  geolocationPermission,
+  getBestPosition,
   cityCacheKey,
   createCache,
   formatResult,
@@ -161,5 +164,139 @@ describe('formatResult', () => {
 
   it('falls back to "Your area" without a city', () => {
     expect(formatResult({ europeanAqi: 10 }).headline).toBe('Your area: Good (European AQI 10)');
+  });
+});
+
+describe('neighbourhood names', () => {
+  const routes = () => mockFetch([
+    ['air-quality-api', airResponse],
+    ['bigdatacloud', jsonResponse({ city: 'Koln', locality: 'Altstadt Nord', countryName: 'Germany' })],
+  ]);
+
+  it('shows the area when the position is precise', async () => {
+    const result = await airQualityForCoords(50.94, 6.96, routes(), { accuracy: 30 });
+    expect(formatResult(result).headline).toBe('Altstadt Nord, Koln, Germany: Fair (European AQI 27)');
+  });
+
+  it('hides the area when the position is rough', async () => {
+    const result = await airQualityForCoords(50.94, 6.96, routes(), { accuracy: 5000 });
+    expect(result.area).toBe('');
+  });
+});
+
+describe('airQualityForIp', () => {
+  it('uses the IP location and marks the result as approximate', async () => {
+    const fetchImpl = mockFetch([
+      ['bigdatacloud', jsonResponse({ latitude: 52.52, longitude: 13.4, city: 'Berlin', countryName: 'Germany' })],
+      ['air-quality-api', airResponse],
+    ]);
+    const result = await airQualityForIp(fetchImpl);
+    expect(result).toMatchObject({ city: 'Berlin', approximate: true, europeanAqi: 27 });
+    expect(fetchImpl.mock.calls[0][0]).not.toContain('latitude=');
+    expect(fetchImpl.mock.calls[1][0]).toContain('latitude=52.52');
+    expect(formatResult(result).details).toMatch(/^Approximate location · /);
+  });
+
+  it('fails cleanly when the IP lookup has no coordinates', async () => {
+    const fetchImpl = mockFetch([['bigdatacloud', jsonResponse({})]]);
+    await expect(airQualityForIp(fetchImpl)).rejects.toMatchObject({ code: 'no-location' });
+  });
+});
+
+describe('getBestPosition', () => {
+  // Fake geolocation that replays readings when the test calls emit().
+  function fakeGeolocation() {
+    const geo = {
+      cleared: [],
+      watchPosition: vi.fn((ok, fail, options) => {
+        geo.ok = ok;
+        geo.fail = fail;
+        geo.options = options;
+        return 7;
+      }),
+      clearWatch: vi.fn((id) => geo.cleared.push(id)),
+      emit(accuracy, lat = 50, lon = 7) {
+        geo.ok({ coords: { latitude: lat, longitude: lon, accuracy } });
+      },
+    };
+    return geo;
+  }
+
+  function fakeTimer() {
+    const t = { fire: null };
+    t.set = (fn) => { t.fire = fn; return 1; };
+    t.clear = vi.fn();
+    return t;
+  }
+
+  it('asks for high accuracy', () => {
+    const geo = fakeGeolocation();
+    getBestPosition(geo);
+    expect(geo.options).toMatchObject({ enableHighAccuracy: true });
+    expect(geo.options.timeout).toBeGreaterThan(0);
+    expect(geo.options.maximumAge).toBeGreaterThan(0);
+  });
+
+  it('keeps refining until a reading is accurate enough', async () => {
+    const geo = fakeGeolocation();
+    const timer = fakeTimer();
+    const promise = getBestPosition(geo, { goodAccuracy: 100, setTimer: timer.set, clearTimer: timer.clear });
+    geo.emit(2000, 1, 1);
+    geo.emit(400, 2, 2);
+    expect(geo.clearWatch).not.toHaveBeenCalled();
+    geo.emit(25, 3, 3);
+    await expect(promise).resolves.toEqual({ lat: 3, lon: 3, accuracy: 25 });
+    expect(geo.cleared).toEqual([7]);
+    expect(timer.clear).toHaveBeenCalled();
+  });
+
+  it('returns the best reading so far when time runs out', async () => {
+    const geo = fakeGeolocation();
+    const timer = fakeTimer();
+    const promise = getBestPosition(geo, { setTimer: timer.set, clearTimer: timer.clear });
+    geo.emit(800, 1, 1);
+    geo.emit(1500, 2, 2); // worse, ignored
+    timer.fire();
+    await expect(promise).resolves.toEqual({ lat: 1, lon: 1, accuracy: 800 });
+    expect(geo.cleared).toEqual([7]);
+  });
+
+  it('reports a refused permission', async () => {
+    const geo = fakeGeolocation();
+    const promise = getBestPosition(geo, { setTimer: () => 1, clearTimer: () => {} });
+    geo.fail({ code: 1, message: 'User denied' });
+    await expect(promise).rejects.toMatchObject({ code: 'denied' });
+  });
+
+  it('keeps an earlier reading if a later one fails', async () => {
+    const geo = fakeGeolocation();
+    const promise = getBestPosition(geo, { setTimer: () => 1, clearTimer: () => {} });
+    geo.emit(600, 4, 4);
+    geo.fail({ code: 3, message: 'Timeout' });
+    await expect(promise).resolves.toMatchObject({ lat: 4, accuracy: 600 });
+  });
+
+  it('handles a reading delivered synchronously', async () => {
+    const geo = fakeGeolocation();
+    geo.watchPosition = vi.fn((ok) => {
+      ok({ coords: { latitude: 5, longitude: 5, accuracy: 10 } });
+      return 9;
+    });
+    await expect(getBestPosition(geo, { setTimer: () => 1, clearTimer: () => {} })).resolves.toMatchObject({ lat: 5 });
+    expect(geo.cleared).toEqual([9]);
+  });
+
+  it('rejects when geolocation is not supported', async () => {
+    await expect(getBestPosition(undefined)).rejects.toMatchObject({ code: 'unsupported' });
+  });
+});
+
+describe('geolocationPermission', () => {
+  it('returns the permission state', async () => {
+    await expect(geolocationPermission({ query: async () => ({ state: 'granted' }) })).resolves.toBe('granted');
+  });
+
+  it('returns "unknown" when the Permissions API is missing', async () => {
+    await expect(geolocationPermission(undefined)).resolves.toBe('unknown');
   });
 });

@@ -163,3 +163,31 @@ body {
     font-size: 2rem;
   }
 }
+
+.locate-btn {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto 1.1rem auto;
+  padding: 0.8rem 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #b56f6f;
+  background: #fff;
+  border: 2px solid #e9a6a6;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.locate-btn[hidden] {
+  display: none;
+}
+.locate-btn:hover:not(:disabled),
+.locate-btn:focus-visible {
+  background: #e9a6a6;
+  color: #fff;
+}
+.locate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
