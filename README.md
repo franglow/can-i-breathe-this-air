@@ -1,123 +1,85 @@
 # Can I Breathe This Air?
 
+A small web app that tells you whether the air outside is OK to breathe, for your current location or any city in the world.
+
+It's a static site (HTML, CSS and JavaScript) with no backend and no API keys. Air-quality data comes straight from free public APIs.
+
 ## Version
 
-- **1.0.0** (2025-06-26): Initial public release (vanilla JS, Cloudflare Worker backend, full test coverage, production-ready).
-- **2.0.0** (planned): Migration to a modern JS framework (React, Vue, Svelte, etc.), improved architecture, and new features.
-
----
+- **2.0.0** (2026-11-18): Switched to Open-Meteo. No backend, no API key.
+- **1.0.0** (2025-06-26): First release (vanilla JS frontend, Cloudflare Worker backend using OpenWeatherMap).
 
 ## Changelog
 
-### 1.0.0 (2025-06-26)
-- First stable release: vanilla JS frontend, Cloudflare Worker backend, persistent/in-memory cache, accessibility, automated tests, and production deployment instructions.
+### 2.0.0
+- Data now comes from the [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api) and [Open-Meteo Geocoding API](https://open-meteo.com/en/docs/geocoding-api). Neither needs an API key.
+- Removed the Cloudflare Worker (`my-air-backend/`) and the OpenWeatherMap dependency.
+- Results use the standard European AQI and also show US AQI, PM2.5 and PM10.
+- City search accepts accented and non-Latin names (Köln, São Paulo, 東京).
+- Location results are cached per ~1 km area, so small GPS changes still use the cache.
+- The loading message now clears when results arrive.
+- Added the cloud image that was missing, a proper `<form>` with a label, and mobile layout fixes.
+- Logic moved to `aqi.js` (no DOM access) and covered by unit tests.
 
-### 2.0.0 (planned)
-- Migration to a modern JS framework.
-- Refactored architecture and new features.
-
----
-
-## Description
-
-Modern web application to check air quality (AQI) by city or geolocation. The frontend is static (HTML/CSS/JS) and the backend is a secure proxy (Cloudflare Worker) that protects the API key and optimizes performance.
-
----
-
-## Table of Contents
-- [Features](#features)
-- [Technologies](#technologies)
-- [Project Structure](#project-structure)
-- [Installation & Usage](#installation--usage)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
-
----
+### 1.0.0
+- First stable release.
 
 ## Features
-- Check AQI by city or current location.
-- Accessible, responsive, and fast UI.
-- Persistent and in-memory cache (frontend and backend).
-- Security: API key is never exposed to the user.
-- Loading indicators and clear user messages.
-- Automated frontend and backend tests.
+- Air quality for your current location (asks for location permission) or any city.
+- European AQI with a plain-language verdict, plus US AQI, PM2.5 and PM10.
+- Results cached for 10 minutes in the browser (memory and `localStorage`).
+- Accessible: labelled form, live regions for results, keyboard friendly.
 
-## Technologies
-- **Frontend:** HTML5, CSS3, JavaScript ES6+, [Vitest](https://vitest.dev/) + jsdom for testing.
-- **Backend:** Cloudflare Workers (ESM), Wrangler, [Vitest](https://vitest.dev/) for testing.
-- **Infrastructure:** Cloudflare Pages (frontend), Cloudflare Workers (backend).
+## Data sources
+| What | Service | Key needed |
+|---|---|---|
+| Air quality | [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api) | No |
+| City search | [Open-Meteo Geocoding API](https://open-meteo.com/en/docs/geocoding-api) | No |
+| Coordinates → city name | [BigDataCloud client reverse geocoding](https://www.bigdatacloud.com/free-api/free-reverse-geocode-to-city-api) | No |
 
-## Project Structure
+Open-Meteo is free for non-commercial use (about 10,000 calls a day) and its data is licensed CC BY 4.0, so the page credits it in the footer. Commercial use needs an [Open-Meteo API plan](https://open-meteo.com/en/pricing).
+
+### European AQI scale
+| EAQI | Level |
+|---|---|
+| 0–20 | Good |
+| 20–40 | Fair |
+| 40–60 | Moderate |
+| 60–80 | Poor |
+| 80–100 | Very poor |
+| 100+ | Extremely poor |
+
+## Project structure
 ```
-├── index.html
-├── style.css
-├── script.js
-├── script.test.js
-├── vitest.config.js
-├── vitest.setup.js
-├── my-air-backend/
-│   ├── src/index.js
-│   ├── wrangler.toml
-│   ├── test/index.spec.js
-│   └── vitest.config.js
-└── README.md
+├── index.html          Page markup
+├── style.css           Styles
+├── script.js           DOM wiring (form, geolocation, rendering)
+├── aqi.js              API calls, cache, validation, AQI interpretation (no DOM)
+├── aqi.test.js         Unit tests for aqi.js
+├── script.test.js      Page tests (jsdom)
+├── image-resources/    Images
+└── vitest.config.js
 ```
 
-## Installation & Usage
-1. **Clone the repository and enter the directory:**
-   ```sh
-   git clone <repo-url>
-   cd can-i-breathe-this-air
-   ```
-2. **Install frontend dependencies:**
-   ```sh
-   npm install
-   ```
-3. **Install backend dependencies:**
-   ```sh
-   cd my-air-backend && npm install
-   ```
-4. **Local development:**
-   - Frontend: open `index.html` in your browser or use a static server.
-   - Backend: in `my-air-backend`, run `npx wrangler dev`.
+## Running locally
+The page uses ES modules, so it must be served over HTTP (opening `index.html` as a file won't work).
+
+```sh
+npm install
+npm start   # serves on http://localhost:5173
+```
+
+Any static server works, e.g. `npx serve .`.
 
 ## Testing
-- **Frontend:**
-  ```sh
-  npx vitest
-  ```
-- **Backend:**
-  ```sh
-  cd my-air-backend && npm test
-  ```
-- Automated tests with mocks and jsdom for UI and logic.
+```sh
+npm test
+```
 
 ## Deployment
-- **Frontend:** Cloudflare Pages (connect the repo and deploy the root directory).
-- **Backend:** Cloudflare Workers (`npx wrangler deploy` in `my-air-backend`).
-- Set the API key as a secret in production (`npx wrangler secret put AIR_API_KEY`).
+Deploy the repository root as a static site, e.g. on Cloudflare Pages, GitHub Pages or Netlify. There is no build step and nothing to configure.
 
-## Contributing
-- Pull requests and issues are welcome.
-- Follow the code style and add tests for new features.
+Location lookup only works over HTTPS (or on `localhost`), which all of these hosts provide.
 
 ## License
 MIT
-
----
-
-### Efficiency Notes & Best Practices (2025)
-- **Local and Worker cache** to minimize latency and API usage.
-- **Async/await** and robust error handling throughout the app.
-- **Accessibility**: ARIA, keyboard support, clear messages.
-- **Testing**: Automated coverage for frontend and backend.
-- **Security**: API key never exposed, secure CORS.
-- **Scalability**: Stateless Worker, easy to scale globally.
-- **Clean, modular code**: easy to maintain and extend.
-
----
-
-**Summary:**
-Efficient, secure, and modern project, production-ready and easy to maintain or scale.

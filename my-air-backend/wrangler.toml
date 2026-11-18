@@ -1,5 +1,0 @@
-name = "my-air-backend"
-main = "src/index.js"
-compatibility_date = "2025-06-25"
-[vars]
-AIR_API_KEY = ""
