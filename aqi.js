@@ -127,10 +127,26 @@ export async function reverseGeocode(lat, lon, fetchImpl = fetch) {
   try {
     const url = `${REVERSE_GEOCODING_URL}?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
     const data = await getJson(url, fetchImpl);
-    return { city: data.city || data.locality || '', country: data.countryName || '' };
+    return { city: data.city || data.locality || '', locality: data.locality || '', country: data.countryName || '' };
   } catch {
-    return { city: '', country: '' };
+    return { city: '', locality: '', country: '' };
   }
+}
+
+// Approximate (city-level) location from the visitor's IP address. Used when
+// device location is unavailable or refused. BigDataCloud falls back to IP
+// lookup when no coordinates are sent.
+export async function approximateLocationFromIp(fetchImpl = fetch) {
+  const data = await getJson(`${REVERSE_GEOCODING_URL}?localityLanguage=en`, fetchImpl);
+  if (typeof data?.latitude !== 'number' || typeof data?.longitude !== 'number') {
+    throw new AirQualityError('no-location', 'Could not estimate location from IP');
+  }
+  return {
+    lat: data.latitude,
+    lon: data.longitude,
+    city: data.city || data.locality || '',
+    country: data.countryName || '',
+  };
 }
 
 export async function fetchAirQuality(lat, lon, fetchImpl = fetch) {
@@ -162,21 +178,110 @@ export async function airQualityForCity(city, fetchImpl = fetch) {
   return { city: place.city, country: place.country, ...air };
 }
 
-export async function airQualityForCoords(lat, lon, fetchImpl = fetch) {
+// Neighbourhood names are only shown when the position is precise enough to trust them.
+export const AREA_NAME_MAX_ACCURACY_M = 1000;
+
+export async function airQualityForCoords(lat, lon, fetchImpl = fetch, { accuracy = Infinity } = {}) {
   const [air, place] = await Promise.all([
     fetchAirQuality(lat, lon, fetchImpl),
     reverseGeocode(lat, lon, fetchImpl),
   ]);
-  return { city: place.city, country: place.country, ...air };
+  const area =
+    accuracy <= AREA_NAME_MAX_ACCURACY_M && place.locality && place.locality !== place.city ? place.locality : '';
+  return { area, city: place.city, country: place.country, ...air };
+}
+
+export async function airQualityForIp(fetchImpl = fetch) {
+  const place = await approximateLocationFromIp(fetchImpl);
+  const air = await fetchAirQuality(place.lat, place.lon, fetchImpl);
+  return { city: place.city, country: place.country, approximate: true, ...air };
+}
+
+// ---------- Device location ----------
+
+export const LOCATION_OPTIONS = {
+  enableHighAccuracy: true, // allow GPS on phones
+  timeout: 10 * 1000, // per reading
+  maximumAge: 5 * 60 * 1000, // reuse a reading up to 5 minutes old
+};
+export const GOOD_ACCURACY_M = 100; // stop refining once this accurate
+export const MAX_LOCATE_MS = 10 * 1000; // never refine for longer than this
+
+export class LocationError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code; // 'denied' | 'unavailable' | 'unsupported'
+  }
+}
+
+// Watches the device position and resolves with the most accurate reading,
+// as soon as one is within `goodAccuracy` metres or after `maxWait` ms.
+// The first reading is often a rough Wi-Fi/cell fix; GPS improves it.
+export function getBestPosition(
+  geolocation,
+  {
+    goodAccuracy = GOOD_ACCURACY_M,
+    maxWait = MAX_LOCATE_MS,
+    options = LOCATION_OPTIONS,
+    setTimer = setTimeout,
+    clearTimer = clearTimeout,
+  } = {},
+) {
+  if (!geolocation?.watchPosition) {
+    return Promise.reject(new LocationError('unsupported', 'Geolocation is not supported'));
+  }
+  return new Promise((resolve, reject) => {
+    let best = null;
+    let done = false;
+    let watchId = null;
+    let timer = null;
+
+    const finish = (err) => {
+      if (done) return;
+      done = true;
+      if (timer != null) clearTimer(timer);
+      if (watchId != null) geolocation.clearWatch(watchId);
+      if (best) {
+        resolve({ lat: best.coords.latitude, lon: best.coords.longitude, accuracy: best.coords.accuracy });
+      } else if (err?.code === 1) {
+        reject(new LocationError('denied', 'Location permission denied'));
+      } else {
+        reject(new LocationError('unavailable', err?.message || 'Location unavailable'));
+      }
+    };
+
+    timer = setTimer(() => finish(), maxWait);
+    watchId = geolocation.watchPosition(
+      (pos) => {
+        if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
+        if (pos.coords.accuracy <= goodAccuracy) finish();
+      },
+      (err) => finish(err),
+      options,
+    );
+    // A reading may arrive synchronously, before watchId was known.
+    if (done && watchId != null) geolocation.clearWatch(watchId);
+  });
+}
+
+// 'granted' | 'prompt' | 'denied' | 'unknown' (Permissions API missing, e.g. older Safari)
+export async function geolocationPermission(permissions = globalThis.navigator?.permissions) {
+  try {
+    const status = await permissions.query({ name: 'geolocation' });
+    return status.state;
+  } catch {
+    return 'unknown';
+  }
 }
 
 // ---------- Formatting ----------
 
 export function formatResult(result) {
   const { label, message } = interpretAQI(result.europeanAqi);
-  const place = [result.city || 'Your area', result.country].filter(Boolean).join(', ');
+  const place = [result.area, result.city || 'Your area', result.country].filter(Boolean).join(', ');
   const headline = `${place}: ${label} (European AQI ${Math.round(result.europeanAqi)})`;
   const details = [
+    result.approximate ? 'Approximate location' : null,
     result.usAqi != null ? `US AQI ${Math.round(result.usAqi)}` : null,
     result.pm25 != null ? `PM2.5 ${result.pm25} µg/m³` : null,
     result.pm10 != null ? `PM10 ${result.pm10} µg/m³` : null,
