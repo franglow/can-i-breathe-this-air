@@ -4,20 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Can I Breathe This Air?</title>
+  <meta name="description" content="Check the air quality of your city or current location." />
+  <link rel="preconnect" href="https://air-quality-api.open-meteo.com" />
+  <link rel="preconnect" href="https://geocoding-api.open-meteo.com" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main class="card">
-    <img src="image-resources/cloud-happy.svg" alt="Happy cloud" class="cloud-img" />
+    <img src="image-resources/cloud-happy.svg" alt="" class="cloud-img" width="120" height="80" />
     <h1 class="main-title">Can I Breathe<br>This Air?</h1>
-    <div id="info-message" class="info-message"></div>
-    <p id="status" class="status-box"></p>
-    <section class="manual-input">
-      <input type="text" id="city-input" placeholder="Enter city or area..." />
-      <button id="check-btn">Check Air Quality</button>
-    </section>
+    <p id="info-message" class="info-message" aria-live="polite"></p>
+    <div class="result" role="status" aria-live="polite">
+      <p id="status" class="status-box"></p>
+      <p id="aqi-message" class="aqi-message"></p>
+      <p id="aqi-details" class="aqi-details"></p>
+    </div>
+    <span id="spinner" class="loader" hidden aria-label="Loading"></span>
+    <form id="city-form" class="manual-input">
+      <label for="city-input" class="visually-hidden">City or area</label>
+      <input type="text" id="city-input" name="city" placeholder="Enter city or area..." autocomplete="off" required maxlength="100" />
+      <button id="check-btn" type="submit">Check Air Quality</button>
+    </form>
+    <footer class="credits">
+      Air quality data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0)
+    </footer>
   </main>
 
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>

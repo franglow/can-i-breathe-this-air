@@ -105,3 +105,61 @@ body {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+.aqi-message {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem 0;
+  color: #222;
+}
+
+.aqi-details {
+  font-size: 0.9rem;
+  color: #6b4f4f;
+  margin: 0 0 1.5rem 0;
+}
+
+.status-box {
+  margin-bottom: 0.6rem;
+}
+
+#spinner {
+  margin-bottom: 1rem;
+}
+.loader[hidden] {
+  display: none;
+}
+
+.manual-input button:hover:not(:disabled),
+.manual-input button:focus-visible {
+  background: #d48b8b;
+}
+
+.credits {
+  margin-top: 1.5rem;
+  font-size: 0.8rem;
+  color: #8a6a6a;
+}
+.credits a {
+  color: inherit;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 420px) {
+  .card {
+    min-width: 0;
+    margin: 1rem;
+    padding: 2rem 1.25rem;
+  }
+  .main-title {
+    font-size: 2rem;
+  }
+}
