@@ -27,7 +27,7 @@
 
     <header class="top">
       <div class="brand">
-        <h1 class="brand-name">Breathe?</h1>
+        <h1 class="brand-name">Can I breathe this air?</h1>
         <p class="tagline">One question. One answer.</p>
       </div>
       <button class="pill" id="theme-btn" type="button" aria-pressed="false">
@@ -51,6 +51,16 @@
 
     <div class="meta">
       <p class="mono" id="aqi-details"></p>
+      <details class="explain" id="explain" hidden>
+        <summary class="mono">What’s this?</summary>
+        <dl class="explain-list">
+          <div><dt>EU AQI</dt><dd>The European Air Quality Index, 0 to 100+. Up to 20 is good, 20–40 fair, 40–60 moderate, 60–80 poor, 80–100 very poor, above 100 extremely poor. The answer above is based on this number.</dd></div>
+          <div><dt>US AQI</dt><dd>The US index, 0 to 500. Up to 50 is good, 51–100 moderate, above 100 unhealthy for sensitive groups.</dd></div>
+          <div><dt>PM2.5</dt><dd>Fine particles (smoke, traffic, heating) that reach deep into the lungs. The WHO suggests a daily average under 15&nbsp;µg/m³.</dd></div>
+          <div><dt>PM10</dt><dd>Coarser particles (dust, pollen, road wear). The WHO suggests a daily average under 45&nbsp;µg/m³.</dd></div>
+          <div><dt>µg/m³</dt><dd>Micrograms of particles in each cubic metre of air.</dd></div>
+        </dl>
+      </details>
       <p class="mono note" id="info-message" aria-live="polite"></p>
       <span id="spinner" class="visually-hidden" hidden>Loading</span>
     </div>
@@ -82,7 +92,7 @@
       <div><span>03</span><p>Free and open data</p></div>
     </section>
 
-    <section class="share" aria-label="Share today's air">
+    <section class="share" id="share-card" aria-label="Share today's air">
       <div class="row"><p class="label">Your shareable card</p><span class="dot" aria-hidden="true"></span></div>
       <p class="share-text" id="share-text">Checking the air…</p>
       <button type="button" id="share-btn" disabled>Share to stories</button>

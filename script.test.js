@@ -84,7 +84,8 @@ describe('page', () => {
       expect($('status').textContent).toBe('Near Berlin, Germany · Fair');
       expect($('answer').textContent).toBe('Yes.');
       expect(document.body.dataset.aqi).toBe('2');
-      expect($('share-text').textContent).toBe('Berlin today: Yes.');
+      expect($('share-text').textContent).toBe('Air in Berlin today: Breathable');
+      expect($('explain').hidden).toBe(false);
       expect($('locate-btn').hidden).toBe(false);
       expect(navigator.geolocation.watchPosition).not.toHaveBeenCalled();
     });
@@ -122,6 +123,14 @@ describe('page', () => {
       expect($('info-message').textContent).toBe('');
     });
 
+    it('clears a typed city so the result is clearly for here', async () => {
+      await loadPage();
+      $('city-input').value = 'Paris';
+      $('locate-btn').click();
+      expect($('city-input').value).toBe('');
+      await settle();
+    });
+
     it('explains when the user refuses', async () => {
       setGeolocation({ error: 1 });
       await loadPage();
@@ -129,6 +138,20 @@ describe('page', () => {
       await settle();
       expect($('status').textContent).toMatch(/^Near Berlin/);
       expect($('info-message').textContent).toMatch(/location access is off/i);
+    });
+  });
+
+  describe('page basics', () => {
+    it('asks the full question in the heading', async () => {
+      await loadPage();
+      expect(document.querySelector('h1').textContent).toBe('Can I breathe this air?');
+    });
+
+    it('hides the explainer when there are no numbers to explain', async () => {
+      await loadPage();
+      await submitCity('Nowhereville');
+      expect($('aqi-details').textContent).toBe('');
+      expect($('explain').hidden).toBe(true);
     });
   });
 

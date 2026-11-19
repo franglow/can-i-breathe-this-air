@@ -38,11 +38,11 @@ export function interpretAQI(eaqi) {
 
 // The page voice. One entry per visual level (body[data-aqi="1..5"]); 80+ is level 5.
 export const BREATH_LEVELS = [
-  { level: 1, sound: 'Aaah.', answer: 'Yes.', line: 'Clean air. Go outside.' },
-  { level: 2, sound: 'Mmm.', answer: 'Yes.', line: 'Fine for almost everyone.' },
-  { level: 3, sound: 'Hmm.', answer: 'Mostly.', line: 'Sensitive lungs: take it easy.' },
-  { level: 4, sound: 'Ehem.', answer: 'Not now.', line: 'Keep time outdoors short.' },
-  { level: 5, sound: '…', answer: 'No.', line: 'Stay in. Close the windows.' },
+  { level: 1, sound: 'Aaah.', answer: 'Yes.', line: 'Clean air. Go outside.', verdict: 'Breathe easy' },
+  { level: 2, sound: 'Mmm.', answer: 'Yes.', line: 'Fine for almost everyone.', verdict: 'Breathable' },
+  { level: 3, sound: 'Hmm.', answer: 'Mostly.', line: 'Sensitive lungs: take it easy.', verdict: 'Mostly breathable' },
+  { level: 4, sound: 'Ehem.', answer: 'Not now.', line: 'Keep time outdoors short.', verdict: 'Not great' },
+  { level: 5, sound: '…', answer: 'No.', line: 'Stay in. Close the windows.', verdict: 'Stay in' },
 ];
 
 export function breathLevel(eaqi) {
@@ -306,4 +306,10 @@ export function describeResult(result) {
   ].filter(Boolean).join(' · ');
 
   return { ...BREATH_LEVELS[level - 1], label, place: `${near}${name} · ${label}`, data, city };
+}
+
+// The sentence on the share card, both on the page and in the shared image.
+export function shareText(view) {
+  const where = view.city && view.city !== 'Your area' ? `in ${view.city}` : 'here';
+  return `Air ${where} today: ${view.verdict}`;
 }

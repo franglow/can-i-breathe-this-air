@@ -9,6 +9,7 @@ import {
   createCache,
   breathLevel,
   describeResult,
+  shareText,
   geoCacheKey,
   interpretAQI,
   isValidCityName,
@@ -313,5 +314,21 @@ describe('geolocationPermission', () => {
 
   it('returns "unknown" when the Permissions API is missing', async () => {
     await expect(geolocationPermission(undefined)).resolves.toBe('unknown');
+  });
+});
+
+describe('shareText', () => {
+  it.each([
+    [10, 'Air in Berlin today: Breathe easy'],
+    [30, 'Air in Berlin today: Breathable'],
+    [50, 'Air in Berlin today: Mostly breathable'],
+    [70, 'Air in Berlin today: Not great'],
+    [95, 'Air in Berlin today: Stay in'],
+  ])('EAQI %d reads "%s"', (aqi, text) => {
+    expect(shareText(describeResult({ city: 'Berlin', europeanAqi: aqi }))).toBe(text);
+  });
+
+  it('says "here" without a city name', () => {
+    expect(shareText(describeResult({ europeanAqi: 10 }))).toBe('Air here today: Breathe easy');
   });
 });
