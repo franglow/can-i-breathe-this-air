@@ -12,6 +12,7 @@ import {
   shareText,
 } from './aqi.js';
 import { renderShareImage } from './share-card.js';
+import { applePlatform } from './platform.js';
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $('status');
@@ -304,6 +305,27 @@ shareBtnEl.addEventListener('click', async () => {
     flashShareStatus('Couldn’t share', 'Could not share the card.');
   }
 });
+
+// ---------- Morning alert (Apple Shortcuts) ----------
+
+// Shortcuts only exists on iPhone, iPad and Mac, so the alert stays hidden
+// everywhere else (Android, Windows, Linux…).
+const platform = applePlatform();
+const notifyEl = $('notify');
+const notifyBtnEl = $('notify-btn');
+const notifyStepsEl = $('notify-steps');
+if (platform) {
+  notifyEl.hidden = false;
+  notifyEl.querySelectorAll('[data-only]').forEach((el) => {
+    el.hidden = el.dataset.only !== platform;
+  });
+  notifyBtnEl.addEventListener('click', () => {
+    const open = notifyStepsEl.hidden;
+    notifyStepsEl.hidden = !open;
+    notifyBtnEl.setAttribute('aria-expanded', String(open));
+    notifyBtnEl.textContent = open ? 'Close' : 'Notify me';
+  });
+}
 
 // ---------- Start ----------
 

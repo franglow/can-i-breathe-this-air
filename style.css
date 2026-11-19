@@ -254,3 +254,22 @@ button:disabled { cursor: progress; opacity: .55; }
 .explain-list div { display: grid; grid-template-columns: 64px 1fr; gap: 12px; }
 .explain-list dt { font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 1.6; }
 .explain-list dd { margin: 0; font-size: 14px; line-height: 1.45; color: var(--sub); }
+
+/* ---------- Morning alert setup (Apple only) ---------- */
+
+.alert-block[hidden], .notify-steps[hidden], .alert-block [data-only][hidden] { display: none; }
+.alert-block { display: flex; flex-direction: column; }
+.notify-steps {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 18px 0 20px;
+  border-bottom: 1px solid var(--ink);
+}
+.notify-steps ol {
+  margin: 0; padding: 0 0 0 1.4em;
+  display: flex; flex-direction: column; gap: 14px;
+  font-size: 15px; line-height: 1.45;
+}
+.notify-steps li::marker { font-family: var(--font-mono); font-size: 13px; color: var(--sub); }
+.notify-steps li .pill { margin-bottom: 8px; }
+.notify-steps .hint { display: block; color: var(--sub); font-size: 14px; }
+.alert-block .notify-steps:not([hidden]) { margin-top: -1px; }

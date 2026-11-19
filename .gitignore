@@ -2,3 +2,6 @@ node_modules/
 .DS_Store
 *.env
 can-i-breathe-thi-air-beta.png
+
+# Built by shortcut/build_shortcut.py; only the signed file is published
+shortcut/*.unsigned.shortcut
