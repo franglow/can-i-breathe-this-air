@@ -81,11 +81,13 @@ describe('page', () => {
   describe('on load', () => {
     it('shows an approximate result and offers precise location without prompting', async () => {
       await loadPage();
-      expect($('status').textContent).toBe('Near Berlin, Germany · Fair');
+      expect($('status').textContent).toBe('Near Berlin, Germany · approximate');
       expect($('answer').textContent).toBe('Yes.');
       expect(document.body.dataset.aqi).toBe('2');
       expect($('share-text').textContent).toBe('Air in Berlin today: Breathable');
-      expect($('explain').hidden).toBe(false);
+      expect($('reading').hidden).toBe(false);
+      expect($('scale-text').textContent).toBe('EU AQI 27 · Fair');
+      expect($('info-message').textContent).toBe('');
       expect($('locate-btn').hidden).toBe(false);
       expect(navigator.geolocation.watchPosition).not.toHaveBeenCalled();
     });
@@ -93,7 +95,7 @@ describe('page', () => {
     it('uses precise location straight away when already allowed', async () => {
       setPermission('granted');
       await loadPage();
-      expect($('status').textContent).toBe('Altstadt Nord, Koln, Germany · Fair');
+      expect($('status').textContent).toBe('Altstadt Nord, Koln, Germany');
       expect($('locate-btn').hidden).toBe(true);
     });
 
@@ -101,7 +103,7 @@ describe('page', () => {
       setPermission('denied');
       await loadPage();
       expect($('status').textContent).toMatch(/^Near Berlin/);
-      expect($('info-message').textContent).toMatch(/location access is off/i);
+      expect($('info-message').textContent).toMatch(/location is off/i);
       expect(navigator.geolocation.watchPosition).not.toHaveBeenCalled();
     });
 
@@ -137,7 +139,7 @@ describe('page', () => {
       $('locate-btn').click();
       await settle();
       expect($('status').textContent).toMatch(/^Near Berlin/);
-      expect($('info-message').textContent).toMatch(/location access is off/i);
+      expect($('info-message').textContent).toMatch(/location is off/i);
     });
   });
 
@@ -182,6 +184,32 @@ describe('page', () => {
     });
   });
 
+  describe('why panel', () => {
+    it('explains today with the main pollutant and WHO comparison', async () => {
+      fetch.mockImplementation(async (url) => {
+        if (url.includes('bigdatacloud')) return respond({ latitude: 52.52, longitude: 13.4, city: 'Berlin', countryName: 'Germany', countryCode: 'DE' });
+        return respond({ current: {
+          european_aqi: 74, us_aqi: 150, pm2_5: 30, pm10: 40, nitrogen_dioxide: 20,
+          european_aqi_pm2_5: 74, european_aqi_pm10: 40, european_aqi_nitrogen_dioxide: 20,
+          birch_pollen: 150,
+        } });
+      });
+      await loadPage();
+      expect($('answer').textContent).toBe('Not now.');
+      expect($('scale-text').textContent).toBe('EU AQI 74 · Poor');
+      expect($('scale-bar').dataset.pos).toBe('4');
+      expect($('main-pollutant').textContent).toBe('Main pollutant: fine particles · 2× the WHO limit');
+      expect($('pollen').hidden).toBe(false);
+      expect($('pollen').textContent).toBe('Pollen: birch high');
+      expect($('explain-label').textContent).toBe('Why “Not now.”?');
+      const rows = [...$('explain-rows').children].map((li) => li.textContent);
+      expect(rows[0]).toContain('PM2.5');
+      expect(rows[0]).toContain('30 / 15');
+      expect(rows[0]).toContain('2× the limit · main pollutant');
+      expect($('explain-other').textContent).toBe('On the US scale this is 150 (Unhealthy for sensitive groups).');
+    });
+  });
+
   describe('page basics', () => {
     it('asks the full question in the heading', async () => {
       await loadPage();
@@ -191,8 +219,7 @@ describe('page', () => {
     it('hides the explainer when there are no numbers to explain', async () => {
       await loadPage();
       await submitCity('Nowhereville');
-      expect($('aqi-details').textContent).toBe('');
-      expect($('explain').hidden).toBe(true);
+      expect($('reading').hidden).toBe(true);
     });
   });
 
@@ -200,8 +227,8 @@ describe('page', () => {
     it('shows air quality and clears the approximate note', async () => {
       await loadPage();
       await submitCity('Köln');
-      expect($('status').textContent).toBe('Cologne, Germany · Fair');
-      expect($('aqi-details').textContent).toBe('EU AQI 27 · US AQI 26 · PM2.5 5.8 · PM10 11.2 µg/m³');
+      expect($('status').textContent).toBe('Cologne, Germany');
+      expect($('scale-text').textContent).toBe('EU AQI 27 · Fair');
       expect($('info-message').textContent).toBe('');
       expect($('check-btn').disabled).toBe(false);
     });

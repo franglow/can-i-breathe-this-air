@@ -18,7 +18,6 @@ const $ = (id) => document.getElementById(id);
 const statusEl = $('status');
 const answerEl = $('answer');
 const messageEl = $('aqi-message');
-const detailsEl = $('aqi-details');
 const infoEl = $('info-message');
 const spinnerEl = $('spinner');
 const soundEl = $('sound');
@@ -30,7 +29,16 @@ const shareTextEl = $('share-text');
 const shareBtnEl = $('share-btn');
 const shareStatusEl = $('share-status');
 const themeBtnEl = $('theme-btn');
+const readingEl = $('reading');
+const scaleTextEl = $('scale-text');
+const scaleBarEl = $('scale-bar');
+const mainPollutantEl = $('main-pollutant');
+const pollenEl = $('pollen');
 const explainEl = $('explain');
+const explainLabelEl = $('explain-label');
+const explainIntroEl = $('explain-intro');
+const explainRowsEl = $('explain-rows');
+const explainOtherEl = $('explain-other');
 const shareCardEl = $('share-card');
 
 const params = new URLSearchParams(location.search);
@@ -61,8 +69,7 @@ function renderState(key) {
   statusEl.textContent = s.status;
   answerEl.textContent = s.answer;
   messageEl.textContent = s.line;
-  detailsEl.textContent = '';
-  explainEl.hidden = true;
+  readingEl.hidden = true;
 }
 
 function showResult(result) {
@@ -73,12 +80,53 @@ function showResult(result) {
   statusEl.textContent = view.place;
   answerEl.textContent = view.answer;
   messageEl.textContent = view.line;
-  detailsEl.textContent = view.data;
-  explainEl.hidden = false;
+  renderReading(view);
   shareTextEl.textContent = shareText(view);
   shareBtnEl.disabled = false;
   // Wait for the level colours to finish their transition before drawing.
   setTimeout(prepareShareImage, 1300);
+}
+
+// The index on its scale, the main pollutant and the "Why…?" panel.
+function renderReading(view) {
+  readingEl.hidden = false;
+  scaleTextEl.textContent = view.scaleText;
+  scaleBarEl.dataset.pos = String(view.scalePosition);
+  scaleBarEl.setAttribute('aria-label', view.scaleLabel);
+  mainPollutantEl.textContent = view.mainLine;
+  mainPollutantEl.hidden = !view.mainLine;
+  pollenEl.textContent = view.pollenLine;
+  pollenEl.hidden = !view.pollenLine;
+
+  explainLabelEl.textContent = `Why “${view.answer}”?`;
+  explainIntroEl.textContent = view.explain.intro;
+  explainOtherEl.textContent = view.explain.otherLine;
+  explainRowsEl.replaceChildren(
+    ...view.explain.rows.map((row) => {
+      const li = document.createElement('li');
+      li.className = row.main ? 'is-main' : '';
+      const name = document.createElement('span');
+      name.className = 'row-name';
+      name.innerHTML = '<b></b> <small></small>';
+      name.querySelector('b').textContent = row.code;
+      name.querySelector('small').textContent = row.name;
+      const value = document.createElement('span');
+      value.className = 'row-value mono';
+      value.textContent = `${row.value} / ${row.limit}`;
+      // Bar runs from 0 to 2× the limit; the tick in the middle is the limit.
+      const bar = document.createElement('span');
+      bar.className = 'row-bar';
+      bar.setAttribute('aria-hidden', 'true');
+      const fill = document.createElement('i');
+      fill.style.width = `${Math.min(100, (row.ratio / 2) * 100)}%`;
+      bar.append(fill);
+      const words = document.createElement('span');
+      words.className = 'row-words';
+      words.textContent = row.main ? `${row.words} · main pollutant` : row.words;
+      li.append(name, value, bar, words);
+      return li;
+    }),
+  );
 }
 
 function setLoading(isLoading, info = '') {
@@ -147,6 +195,9 @@ formEl.addEventListener('submit', (event) => {
 
 // ---------- Location ----------
 
+// Short: the place line already says "approximate".
+const LOCATION_OFF = 'Location is off in this browser. Search a city for an exact reading.';
+
 // City-level estimate from the IP address; no permission needed.
 function showApproximateLocation(afterInfo) {
   return lookup({ cacheKey: 'ip', load: () => airQualityForIp(), info: 'Estimating your location…', afterInfo });
@@ -161,9 +212,9 @@ async function showDeviceLocation() {
     setLoading(false);
     if (err.code === 'denied') {
       locateBtnEl.hidden = true;
-      return showApproximateLocation('Location access is off, so this is approximate. Search for a city for exact results.');
+      return showApproximateLocation(LOCATION_OFF);
     }
-    return showApproximateLocation('Could not get your precise location, so this is approximate.');
+    return showApproximateLocation('Couldn’t get your precise location.');
   }
   locateBtnEl.hidden = true;
   return lookup({
@@ -183,7 +234,7 @@ locateBtnEl.addEventListener('click', () => {
 async function start() {
   const canUseDevice = window.isSecureContext && 'geolocation' in navigator;
   if (!canUseDevice) {
-    return showApproximateLocation('Precise location needs HTTPS, so this is approximate.');
+    return showApproximateLocation('Precise location needs HTTPS.');
   }
 
   const permission = await geolocationPermission();
@@ -192,11 +243,11 @@ async function start() {
     return showDeviceLocation();
   }
   if (permission === 'denied') {
-    return showApproximateLocation('Location access is off, so this is approximate. Search for a city for exact results.');
+    return showApproximateLocation(LOCATION_OFF);
   }
   // 'prompt' or 'unknown': don't ask on load. Show an estimate and let the user opt in.
   locateBtnEl.hidden = false;
-  return showApproximateLocation('This is approximate. Use your location for a precise reading.');
+  return showApproximateLocation();
 }
 
 // ---------- Theme ----------
@@ -330,16 +381,23 @@ if (platform) {
 // ---------- Start ----------
 
 // Temporary test override: ?aqi=1..5 shows sample data for that level and skips the network.
+// Each sample: [EU AQI, US AQI, PM2.5, PM10, NO₂, main pollutant, birch pollen].
 const SAMPLES = [
-  { europeanAqi: 17, pm25: 3.5, pm10: 4.9 },
-  { europeanAqi: 34, pm25: 9, pm10: 22 },
-  { europeanAqi: 52, pm25: 18, pm10: 40 },
-  { europeanAqi: 71, pm25: 32, pm10: 70 },
-  { europeanAqi: 96, pm25: 58, pm10: 115 },
-];
+  [17, 22, 3.5, 4.9, 9, 'no2', 0],
+  [34, 41, 9, 22, 18, 'pm25', 0],
+  [52, 88, 18, 40, 30, 'pm25', 120],
+  [71, 140, 32, 70, 41, 'pm25', 0],
+  [96, 190, 58, 115, 60, 'pm10', 0],
+].map(([eu, us, pm25, pm10, no2, main, birch]) => ({
+  europeanAqi: eu,
+  usAqi: us,
+  concentrations: { pm25, pm10, no2 },
+  subIndex: { eu: { [main]: eu }, us: { [main]: us } },
+  pollen: { birch },
+}));
 const sampleLevel = parseInt(params.get('aqi'), 10);
 if (sampleLevel >= 1 && sampleLevel <= 5) {
-  showResult({ city: 'Berlin', ...SAMPLES[sampleLevel - 1] });
+  showResult({ city: 'Berlin', country: 'Germany', countryCode: params.get('cc') || 'DE', ...SAMPLES[sampleLevel - 1] });
   infoEl.textContent = 'Sample data (?aqi override).';
 } else {
   start();
