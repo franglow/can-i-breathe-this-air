@@ -56,6 +56,8 @@ Open-Meteo is free for non-commercial use (about 10,000 calls a day) and its dat
 ├── script.js           DOM wiring (form, geolocation, rendering)
 ├── aqi.js              API calls, cache, validation, AQI interpretation (no DOM)
 ├── aqi.test.js         Unit tests for aqi.js
+├── share-card.js       Draws the share card as a PNG for the share sheet
+├── share-card.test.js  Unit tests for share-card.js
 ├── script.test.js      Page tests (jsdom)
 ├── image-resources/    Images
 └── vitest.config.js

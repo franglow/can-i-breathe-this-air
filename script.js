@@ -9,7 +9,9 @@ import {
   geolocationPermission,
   getBestPosition,
   isValidCityName,
+  shareText,
 } from './aqi.js';
+import { renderShareImage } from './share-card.js';
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $('status');
@@ -27,6 +29,8 @@ const shareTextEl = $('share-text');
 const shareBtnEl = $('share-btn');
 const shareStatusEl = $('share-status');
 const themeBtnEl = $('theme-btn');
+const explainEl = $('explain');
+const shareCardEl = $('share-card');
 
 const params = new URLSearchParams(location.search);
 const cache = createCache();
@@ -57,6 +61,7 @@ function renderState(key) {
   answerEl.textContent = s.answer;
   messageEl.textContent = s.line;
   detailsEl.textContent = '';
+  explainEl.hidden = true;
 }
 
 function showResult(result) {
@@ -68,8 +73,11 @@ function showResult(result) {
   answerEl.textContent = view.answer;
   messageEl.textContent = view.line;
   detailsEl.textContent = view.data;
-  shareTextEl.textContent = `${view.city} today: ${view.answer}`;
+  explainEl.hidden = false;
+  shareTextEl.textContent = shareText(view);
   shareBtnEl.disabled = false;
+  // Wait for the level colours to finish their transition before drawing.
+  setTimeout(prepareShareImage, 1300);
 }
 
 function setLoading(isLoading, info = '') {
@@ -165,6 +173,9 @@ async function showDeviceLocation() {
 }
 
 locateBtnEl.addEventListener('click', () => {
+  // The result will be for "here", so a typed city would be misleading.
+  cityInputEl.value = '';
+  cityInputEl.blur(); // close the on-screen keyboard on phones
   showDeviceLocation();
 });
 
@@ -200,33 +211,98 @@ function setTheme(theme, save) {
 
 themeBtnEl.addEventListener('click', () => {
   setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true);
+  // The share image follows the theme: redraw once the colours have settled.
+  if (document.body.dataset.state === 'result') setTimeout(prepareShareImage, 700);
 });
 // The inline script in <head> already picked the theme; sync the button with it.
 setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light', false);
 
 // ---------- Share ----------
 
+const SITE_URL = 'https://can-i-breathe-this-air.pages.dev';
 let shareResetTimer;
-shareBtnEl.addEventListener('click', async () => {
-  const data = { title: 'Can I Breathe This Air?', text: shareTextEl.textContent, url: location.origin + location.pathname };
+let shareImage = null; // { text, theme, blob } for the card currently shown
+
+// Draw the image as soon as a result shows, so the share sheet can open
+// straight from the tap (iOS Safari refuses share() after a long await).
+async function prepareShareImage() {
+  const text = shareTextEl.textContent;
+  const theme = document.documentElement.dataset.theme;
+  const level = document.body.dataset.aqi;
   try {
-    if (navigator.share) {
-      await navigator.share(data);
-      return;
-    }
-    await navigator.clipboard.writeText(`${data.text} ${data.url}`);
-    shareBtnEl.textContent = 'Link copied';
-    shareStatusEl.textContent = 'Link copied to the clipboard.';
+    const blob = await renderShareImage(shareCardEl, {
+      text,
+      label: 'Can I breathe this air?',
+      footer: SITE_URL.replace('https://', ''),
+    });
+    shareImage = { text, theme, level, blob };
   } catch (err) {
-    if (err?.name === 'AbortError') return; // user closed the share sheet
-    shareBtnEl.textContent = 'Couldn’t copy';
-    shareStatusEl.textContent = 'Could not copy the link.';
+    console.error(err);
+    shareImage = null;
   }
+}
+
+function currentShareImage() {
+  const ok = shareImage
+    && shareImage.text === shareTextEl.textContent
+    && shareImage.theme === document.documentElement.dataset.theme
+    && shareImage.level === document.body.dataset.aqi;
+  return ok ? shareImage.blob : null;
+}
+
+function flashShareStatus(button, status) {
+  shareBtnEl.textContent = button;
+  shareStatusEl.textContent = status;
   clearTimeout(shareResetTimer);
   shareResetTimer = setTimeout(() => {
     shareBtnEl.textContent = 'Share to stories';
     shareStatusEl.textContent = '';
   }, 2500);
+}
+
+function downloadImage(blob) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'can-i-breathe-this-air.png';
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+shareBtnEl.addEventListener('click', async () => {
+  const text = shareTextEl.textContent;
+  try {
+    const blob = currentShareImage() ?? (await renderShareImage(shareCardEl, {
+      text,
+      label: 'Can I breathe this air?',
+      footer: SITE_URL.replace('https://', ''),
+    }));
+    const file = new File([blob], 'can-i-breathe-this-air.png', { type: 'image/png' });
+
+    // Phones and Safari: share the card image itself (Instagram, WhatsApp, Messages…).
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], text: `${text} · ${SITE_URL}` });
+      return;
+    }
+    // Share sheet without image support: share the sentence and the link.
+    if (navigator.share) {
+      await navigator.share({ title: 'Can I Breathe This Air?', text, url: SITE_URL });
+      return;
+    }
+    // Desktop without a share sheet: save the image and copy the text.
+    downloadImage(blob);
+    try {
+      await navigator.clipboard.writeText(`${text} · ${SITE_URL}`);
+      flashShareStatus('Image saved', 'Card image downloaded and text copied.');
+    } catch {
+      flashShareStatus('Image saved', 'Card image downloaded.');
+    }
+  } catch (err) {
+    if (err?.name === 'AbortError') return; // user closed the share sheet
+    console.error(err);
+    flashShareStatus('Couldn’t share', 'Could not share the card.');
+  }
 });
 
 // ---------- Start ----------

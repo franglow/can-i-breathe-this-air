@@ -84,7 +84,7 @@ p { margin: 0; }
 
 .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .brand { display: flex; flex-direction: column; gap: 2px; }
-.brand-name { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.2; letter-spacing: -.03em; }
+.brand-name { margin: 0; text-wrap: balance; font-size: 26px; font-weight: 700; line-height: 1.2; letter-spacing: -.03em; }
 .tagline { font-size: 14px; color: var(--sub); }
 [data-theme="light"] .icon-sun,
 [data-theme="dark"] .icon-moon { display: none; }
@@ -230,3 +230,27 @@ button:disabled { cursor: progress; opacity: .55; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* ---------- "What's this?" explainer ---------- */
+
+.explain[hidden] { display: none; }
+.explain summary {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 32px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--ink);
+  text-decoration: underline; text-underline-offset: 4px;
+}
+.explain summary::-webkit-details-marker { display: none; }
+.explain summary::after { content: '+'; text-decoration: none; display: inline-block; }
+.explain[open] summary::after { content: '−'; }
+.explain-list {
+  margin: 8px 0 4px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--ink);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.explain-list div { display: grid; grid-template-columns: 64px 1fr; gap: 12px; }
+.explain-list dt { font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 1.6; }
+.explain-list dd { margin: 0; font-size: 14px; line-height: 1.45; color: var(--sub); }
