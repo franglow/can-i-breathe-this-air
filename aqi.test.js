@@ -7,7 +7,8 @@ import {
   getBestPosition,
   cityCacheKey,
   createCache,
-  formatResult,
+  breathLevel,
+  describeResult,
   geoCacheKey,
   interpretAQI,
   isValidCityName,
@@ -154,16 +155,30 @@ describe('airQualityForCoords', () => {
   });
 });
 
-describe('formatResult', () => {
-  it('builds headline, message and details', () => {
-    const out = formatResult({ city: 'Cologne', country: 'Germany', europeanAqi: 27, usAqi: 26, pm25: 5.8, pm10: 11.2 });
-    expect(out.headline).toBe('Cologne, Germany: Fair (European AQI 27)');
-    expect(out.message).toMatch(/fair/i);
-    expect(out.details).toBe('US AQI 26 · PM2.5 5.8 µg/m³ · PM10 11.2 µg/m³');
+describe('breathLevel', () => {
+  it.each([[0, 1], [20, 1], [20.5, 2], [40, 2], [55, 3], [80, 4], [81, 5], [250, 5]])('%s -> level %s', (eaqi, level) => {
+    expect(breathLevel(eaqi)).toBe(level);
+  });
+
+  it('returns null for missing data', () => {
+    expect(breathLevel(undefined)).toBeNull();
+  });
+});
+
+describe('describeResult', () => {
+  it('builds place, answer and data line', () => {
+    const out = describeResult({ city: 'Cologne', country: 'Germany', europeanAqi: 27, usAqi: 26, pm25: 5.8, pm10: 11.2 });
+    expect(out).toMatchObject({ level: 2, sound: 'Mmm.', answer: 'Yes.', city: 'Cologne' });
+    expect(out.place).toBe('Cologne, Germany · Fair');
+    expect(out.data).toBe('EU AQI 27 · US AQI 26 · PM2.5 5.8 · PM10 11.2 µg/m³');
   });
 
   it('falls back to "Your area" without a city', () => {
-    expect(formatResult({ europeanAqi: 10 }).headline).toBe('Your area: Good (European AQI 10)');
+    expect(describeResult({ europeanAqi: 10 }).place).toBe('Your area · Good');
+  });
+
+  it('uses level 5 for extremely poor air', () => {
+    expect(describeResult({ city: 'X', europeanAqi: 140 })).toMatchObject({ level: 5, answer: 'No.', label: 'Extremely poor' });
   });
 });
 
@@ -175,7 +190,7 @@ describe('neighbourhood names', () => {
 
   it('shows the area when the position is precise', async () => {
     const result = await airQualityForCoords(50.94, 6.96, routes(), { accuracy: 30 });
-    expect(formatResult(result).headline).toBe('Altstadt Nord, Koln, Germany: Fair (European AQI 27)');
+    expect(describeResult(result).place).toBe('Altstadt Nord, Koln, Germany · Fair');
   });
 
   it('hides the area when the position is rough', async () => {
@@ -194,7 +209,7 @@ describe('airQualityForIp', () => {
     expect(result).toMatchObject({ city: 'Berlin', approximate: true, europeanAqi: 27 });
     expect(fetchImpl.mock.calls[0][0]).not.toContain('latitude=');
     expect(fetchImpl.mock.calls[1][0]).toContain('latitude=52.52');
-    expect(formatResult(result).details).toMatch(/^Approximate location · /);
+    expect(describeResult(result).place).toBe('Near Berlin, Germany · Fair');
   });
 
   it('fails cleanly when the IP lookup has no coordinates', async () => {

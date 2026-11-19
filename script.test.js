@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 const html = readFileSync('./index.html', 'utf8');
-const body = html.match(/<body>([\s\S]*)<\/body>/)[1].replace(/<script[\s\S]*?<\/script>/g, '');
+const body = html.match(/<body[^>]*>([\s\S]*)<\/body>/)[1].replace(/<script[\s\S]*?<\/script>/g, '');
 
 function respond(body) {
   return { ok: true, status: 200, json: async () => body };
@@ -81,8 +81,10 @@ describe('page', () => {
   describe('on load', () => {
     it('shows an approximate result and offers precise location without prompting', async () => {
       await loadPage();
-      expect($('status').textContent).toBe('Berlin, Germany: Fair (European AQI 27)');
-      expect($('aqi-details').textContent).toMatch(/^Approximate location/);
+      expect($('status').textContent).toBe('Near Berlin, Germany · Fair');
+      expect($('answer').textContent).toBe('Yes.');
+      expect(document.body.dataset.aqi).toBe('2');
+      expect($('share-text').textContent).toBe('Berlin today: Yes.');
       expect($('locate-btn').hidden).toBe(false);
       expect(navigator.geolocation.watchPosition).not.toHaveBeenCalled();
     });
@@ -90,14 +92,14 @@ describe('page', () => {
     it('uses precise location straight away when already allowed', async () => {
       setPermission('granted');
       await loadPage();
-      expect($('status').textContent).toBe('Altstadt Nord, Koln, Germany: Fair (European AQI 27)');
+      expect($('status').textContent).toBe('Altstadt Nord, Koln, Germany · Fair');
       expect($('locate-btn').hidden).toBe(true);
     });
 
     it('falls back to approximate location when access is off', async () => {
       setPermission('denied');
       await loadPage();
-      expect($('status').textContent).toMatch(/^Berlin/);
+      expect($('status').textContent).toMatch(/^Near Berlin/);
       expect($('info-message').textContent).toMatch(/location access is off/i);
       expect(navigator.geolocation.watchPosition).not.toHaveBeenCalled();
     });
@@ -105,7 +107,7 @@ describe('page', () => {
     it('falls back to approximate location without HTTPS', async () => {
       Object.defineProperty(window, 'isSecureContext', { value: false, configurable: true });
       await loadPage();
-      expect($('status').textContent).toMatch(/^Berlin/);
+      expect($('status').textContent).toMatch(/^Near Berlin/);
       expect($('info-message').textContent).toMatch(/https/i);
     });
   });
@@ -125,7 +127,7 @@ describe('page', () => {
       await loadPage();
       $('locate-btn').click();
       await settle();
-      expect($('status').textContent).toMatch(/^Berlin/);
+      expect($('status').textContent).toMatch(/^Near Berlin/);
       expect($('info-message').textContent).toMatch(/location access is off/i);
     });
   });
@@ -134,8 +136,8 @@ describe('page', () => {
     it('shows air quality and clears the approximate note', async () => {
       await loadPage();
       await submitCity('Köln');
-      expect($('status').textContent).toBe('Cologne, Germany: Fair (European AQI 27)');
-      expect($('aqi-details').textContent).toContain('PM2.5 5.8');
+      expect($('status').textContent).toBe('Cologne, Germany · Fair');
+      expect($('aqi-details').textContent).toBe('EU AQI 27 · US AQI 26 · PM2.5 5.8 · PM10 11.2 µg/m³');
       expect($('info-message').textContent).toBe('');
       expect($('check-btn').disabled).toBe(false);
     });
@@ -152,14 +154,31 @@ describe('page', () => {
       await loadPage();
       fetch.mockClear();
       await submitCity('123');
-      expect($('status').textContent).toMatch(/valid city/i);
+      expect($('answer').textContent).toBe('Hmm?');
+      expect($('aqi-message').textContent).toMatch(/city name/i);
       expect(fetch).not.toHaveBeenCalled();
     });
 
     it('shows a clear message for an unknown city', async () => {
       await loadPage();
       await submitCity('Nowhereville');
-      expect($('status').textContent).toMatch(/city not found/i);
+      expect($('answer').textContent).toBe('Where?');
+      expect(document.body.dataset.state).toBe('error');
+      expect(document.body.dataset.aqi).toBeUndefined();
+    });
+    it('stays calm on a network error', async () => {
+      await loadPage();
+      fetch.mockImplementation(async () => { throw new TypeError('offline'); });
+      await submitCity('Lima');
+      expect($('answer').textContent).toBe('Offline?');
+    });
+
+    it('asks the user to wait when checking too fast', async () => {
+      await loadPage();
+      await submitCity('Lima');
+      await submitCity('Quito');
+      expect($('answer').textContent).toBe('One sec.');
+      expect($('aqi-message').textContent).toMatch(/few seconds/i);
     });
   });
 });

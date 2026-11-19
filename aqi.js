@@ -23,20 +23,31 @@ export function isValidCityName(city) {
 // ---------- AQI interpretation (European AQI scale) ----------
 
 const EAQI_BANDS = [
-  { max: 20, label: 'Good', message: '🌿 Yes, you can breathe easy.' },
-  { max: 40, label: 'Fair', message: '🙂 Air quality is fair. Enjoy your day!' },
-  { max: 60, label: 'Moderate', message: '😐 The air is a bit polluted. Maybe avoid heavy outdoor activity.' },
-  { max: 80, label: 'Poor', message: '😷 The air is poor. Sensitive people should stay inside.' },
-  { max: 100, label: 'Very poor', message: '☠️ Very poor air quality. Avoid going outside.' },
-  { max: Infinity, label: 'Extremely poor', message: '☠️ Extremely poor air quality. Stay indoors.' },
+  { max: 20, label: 'Good' },
+  { max: 40, label: 'Fair' },
+  { max: 60, label: 'Moderate' },
+  { max: 80, label: 'Poor' },
+  { max: 100, label: 'Very poor' },
+  { max: Infinity, label: 'Extremely poor' },
 ];
 
 export function interpretAQI(eaqi) {
-  if (typeof eaqi !== 'number' || Number.isNaN(eaqi) || eaqi < 0) {
-    return { label: 'Unknown', message: '🤷 Air quality data unavailable.' };
-  }
-  const band = EAQI_BANDS.find((b) => eaqi <= b.max);
-  return { label: band.label, message: band.message };
+  if (typeof eaqi !== 'number' || Number.isNaN(eaqi) || eaqi < 0) return { label: 'Unknown' };
+  return { label: EAQI_BANDS.find((b) => eaqi <= b.max).label };
+}
+
+// The page voice. One entry per visual level (body[data-aqi="1..5"]); 80+ is level 5.
+export const BREATH_LEVELS = [
+  { level: 1, sound: 'Aaah.', answer: 'Yes.', line: 'Clean air. Go outside.' },
+  { level: 2, sound: 'Mmm.', answer: 'Yes.', line: 'Fine for almost everyone.' },
+  { level: 3, sound: 'Hmm.', answer: 'Mostly.', line: 'Sensitive lungs: take it easy.' },
+  { level: 4, sound: 'Ehem.', answer: 'Not now.', line: 'Keep time outdoors short.' },
+  { level: 5, sound: '…', answer: 'No.', line: 'Stay in. Close the windows.' },
+];
+
+export function breathLevel(eaqi) {
+  if (typeof eaqi !== 'number' || Number.isNaN(eaqi) || eaqi < 0) return null;
+  return Math.min(5, EAQI_BANDS.findIndex((b) => eaqi <= b.max) + 1);
 }
 
 // ---------- Cache (memory + localStorage) ----------
@@ -276,15 +287,23 @@ export async function geolocationPermission(permissions = globalThis.navigator?.
 
 // ---------- Formatting ----------
 
-export function formatResult(result) {
-  const { label, message } = interpretAQI(result.europeanAqi);
-  const place = [result.area, result.city || 'Your area', result.country].filter(Boolean).join(', ');
-  const headline = `${place}: ${label} (European AQI ${Math.round(result.europeanAqi)})`;
-  const details = [
-    result.approximate ? 'Approximate location' : null,
-    result.usAqi != null ? `US AQI ${Math.round(result.usAqi)}` : null,
-    result.pm25 != null ? `PM2.5 ${result.pm25} µg/m³` : null,
-    result.pm10 != null ? `PM10 ${result.pm10} µg/m³` : null,
+// Everything the page shows for one result.
+export function describeResult(result) {
+  const level = breathLevel(result.europeanAqi) ?? 1;
+  const { label } = interpretAQI(result.europeanAqi);
+  const city = result.city || 'Your area';
+  const name = [result.area, city, result.country].filter(Boolean).join(', ');
+  const near = result.approximate && result.city ? 'Near ' : '';
+
+  const pm = [
+    result.pm25 != null ? `PM2.5 ${result.pm25}` : null,
+    result.pm10 != null ? `PM10 ${result.pm10}` : null,
   ].filter(Boolean).join(' · ');
-  return { headline, message, details };
+  const data = [
+    `EU AQI ${Math.round(result.europeanAqi)}`,
+    result.usAqi != null ? `US AQI ${Math.round(result.usAqi)}` : null,
+    pm ? `${pm} µg/m³` : null,
+  ].filter(Boolean).join(' · ');
+
+  return { ...BREATH_LEVELS[level - 1], label, place: `${near}${name} · ${label}`, data, city };
 }
