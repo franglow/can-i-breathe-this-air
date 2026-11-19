@@ -9,6 +9,12 @@ import {
   createCache,
   breathLevel,
   describeResult,
+  CURRENT_FIELDS,
+  compareToLimit,
+  highPollen,
+  indexForCountry,
+  mainPollutant,
+  onScale,
   shareText,
   geoCacheKey,
   interpretAQI,
@@ -167,15 +173,16 @@ describe('breathLevel', () => {
 });
 
 describe('describeResult', () => {
-  it('builds place, answer and data line', () => {
+  it('builds place, answer and scale line', () => {
     const out = describeResult({ city: 'Cologne', country: 'Germany', europeanAqi: 27, usAqi: 26, pm25: 5.8, pm10: 11.2 });
     expect(out).toMatchObject({ level: 2, sound: 'Mmm.', answer: 'Yes.', city: 'Cologne' });
-    expect(out.place).toBe('Cologne, Germany · Fair');
-    expect(out.data).toBe('EU AQI 27 · US AQI 26 · PM2.5 5.8 · PM10 11.2 µg/m³');
+    expect(out.place).toBe('Cologne, Germany');
+    expect(out.scaleText).toBe('EU AQI 27 · Fair');
+    expect(out.scalePosition).toBe(2);
   });
 
   it('falls back to "Your area" without a city', () => {
-    expect(describeResult({ europeanAqi: 10 }).place).toBe('Your area · Good');
+    expect(describeResult({ europeanAqi: 10 }).place).toBe('Your area');
   });
 
   it('uses level 5 for extremely poor air', () => {
@@ -191,7 +198,7 @@ describe('neighbourhood names', () => {
 
   it('shows the area when the position is precise', async () => {
     const result = await airQualityForCoords(50.94, 6.96, routes(), { accuracy: 30 });
-    expect(describeResult(result).place).toBe('Altstadt Nord, Koln, Germany · Fair');
+    expect(describeResult(result).place).toBe('Altstadt Nord, Koln, Germany');
   });
 
   it('hides the area when the position is rough', async () => {
@@ -210,7 +217,7 @@ describe('airQualityForIp', () => {
     expect(result).toMatchObject({ city: 'Berlin', approximate: true, europeanAqi: 27 });
     expect(fetchImpl.mock.calls[0][0]).not.toContain('latitude=');
     expect(fetchImpl.mock.calls[1][0]).toContain('latitude=52.52');
-    expect(describeResult(result).place).toBe('Near Berlin, Germany · Fair');
+    expect(describeResult(result).place).toBe('Near Berlin, Germany · approximate');
   });
 
   it('fails cleanly when the IP lookup has no coordinates', async () => {
@@ -330,5 +337,111 @@ describe('shareText', () => {
 
   it('says "here" without a city name', () => {
     expect(shareText(describeResult({ europeanAqi: 10 }))).toBe('Air here today: Breathe easy');
+  });
+});
+
+describe('indexForCountry', () => {
+  it.each([['DE', 'eu'], ['gb', 'eu'], ['CH', 'eu'], ['US', 'us'], ['BR', 'us'], ['JP', 'us'], ['', 'eu'], [undefined, 'eu']])(
+    '%s -> %s',
+    (code, index) => {
+      expect(indexForCountry(code)).toBe(index);
+    },
+  );
+});
+
+describe('onScale', () => {
+  it.each([
+    ['eu', 30, 2, 'Fair', 2],
+    ['eu', 140, 6, 'Extremely poor', 5],
+    ['us', 50, 1, 'Good', 1],
+    ['us', 120, 3, 'Unhealthy for sensitive groups', 3],
+    ['us', 350, 6, 'Hazardous', 5],
+  ])('%s %d -> band %d (%s), level %d', (index, value, position, label, level) => {
+    expect(onScale(index, value)).toEqual({ position, of: 6, label, level });
+  });
+});
+
+describe('compareToLimit', () => {
+  it.each([
+    [5, 15, 'well under the WHO limit'],
+    [10, 15, 'under the WHO limit'],
+    [15, 15, 'near the WHO limit'],
+    [20, 15, 'above the WHO limit'],
+    [30, 15, '2× the WHO limit'],
+    [40, 15, '2.5× the WHO limit'],
+  ])('%d vs %d', (value, limit, words) => {
+    expect(compareToLimit(value, limit)).toBe(words);
+  });
+});
+
+describe('mainPollutant', () => {
+  it('picks the highest sub-index', () => {
+    expect(mainPollutant({ pm25: 22, pm10: 10, no2: 27, o3: null })).toBe('no2');
+  });
+  it('returns null without data', () => {
+    expect(mainPollutant(undefined)).toBeNull();
+  });
+});
+
+describe('highPollen', () => {
+  it('lists only types at or above "high"', () => {
+    expect(highPollen({ birch: 120, grass: 10, ragweed: 50, olive: null })).toEqual(['birch', 'ragweed']);
+  });
+});
+
+describe('describeResult explanation', () => {
+  const berlin = {
+    city: 'Berlin', country: 'Germany', countryCode: 'DE', europeanAqi: 27, usAqi: 35,
+    concentrations: { pm25: 5.9, pm10: 7.3, no2: 14.9, o3: 42, so2: 1, co: 200 },
+    subIndex: { eu: { pm25: 22, pm10: 10, no2: 27, o3: 14 }, us: { pm25: 35, no2: 7 } },
+    pollen: { birch: 120, grass: 60 },
+  };
+
+  it('explains today in Europe with the EU scale, main pollutant and pollen', () => {
+    const out = describeResult(berlin);
+    expect(out.index).toBe('eu');
+    expect(out.scaleText).toBe('EU AQI 27 · Fair');
+    expect(out.mainLine).toBe('Main pollutant: nitrogen dioxide · under the WHO limit');
+    expect(out.pollenLine).toBe('Pollen: birch and grass high');
+    expect(out.explain.intro).toBe(
+      'Today’s air is rated Fair: level 2 of 6 on the European scale. The main pollutant is nitrogen dioxide (NO₂), mostly from traffic.',
+    );
+    expect(out.explain.rows.map((r) => [r.code, r.words, r.main])).toEqual([
+      ['PM2.5', 'well under', false],
+      ['PM10', 'well under', false],
+      ['NO₂', 'under', true],
+    ]);
+    expect(out.explain.otherLine).toBe('On the US scale this is 35 (Good).');
+  });
+
+  it('uses the US scale outside Europe, and the answer follows it', () => {
+    const out = describeResult({ ...berlin, city: 'Denver', countryCode: 'US', usAqi: 120, europeanAqi: 45 });
+    expect(out.index).toBe('us');
+    expect(out.scaleText).toBe('US AQI 120 · Unhealthy for sensitive groups');
+    expect(out).toMatchObject({ level: 3, answer: 'Mostly.' });
+    expect(out.mainLine).toMatch(/^Main pollutant: fine particles/);
+    expect(out.pollenLine).toBe(''); // pollen data is European
+    expect(out.explain.otherLine).toBe('On the European scale this is 45 (Moderate).');
+  });
+
+  it('lists ozone only when it is the main pollutant', () => {
+    const out = describeResult({ ...berlin, subIndex: { eu: { o3: 60, pm25: 20 } } });
+    expect(out.explain.rows.map((r) => r.code)).toEqual(['PM2.5', 'PM10', 'NO₂', 'O₃']);
+    expect(out.explain.rows.at(-1).main).toBe(true);
+  });
+
+  it('falls back to the EU scale when the US value is missing', () => {
+    expect(describeResult({ ...berlin, countryCode: 'US', usAqi: null }).index).toBe('eu');
+  });
+});
+
+describe('CURRENT_FIELDS', () => {
+  // Every field here was checked against the live Open-Meteo API; an unknown
+  // field makes the whole request fail with HTTP 400.
+  it('requests only fields Open-Meteo supports', () => {
+    expect(CURRENT_FIELDS).not.toContain('european_aqi_carbon_monoxide');
+    expect(CURRENT_FIELDS).toEqual(expect.arrayContaining([
+      'european_aqi', 'us_aqi', 'pm2_5', 'european_aqi_pm2_5', 'us_aqi_carbon_monoxide', 'birch_pollen',
+    ]));
   });
 });

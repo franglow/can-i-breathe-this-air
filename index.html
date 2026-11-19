@@ -50,17 +50,23 @@
     </section>
 
     <div class="meta">
-      <p class="mono" id="aqi-details"></p>
-      <details class="explain" id="explain" hidden>
-        <summary class="mono">What’s this?</summary>
-        <dl class="explain-list">
-          <div><dt>EU AQI</dt><dd>The European Air Quality Index, 0 to 100+. Up to 20 is good, 20–40 fair, 40–60 moderate, 60–80 poor, 80–100 very poor, above 100 extremely poor. The answer above is based on this number.</dd></div>
-          <div><dt>US AQI</dt><dd>The US index, 0 to 500. Up to 50 is good, 51–100 moderate, above 100 unhealthy for sensitive groups.</dd></div>
-          <div><dt>PM2.5</dt><dd>Fine particles (smoke, traffic, heating) that reach deep into the lungs. The WHO suggests a daily average under 15&nbsp;µg/m³.</dd></div>
-          <div><dt>PM10</dt><dd>Coarser particles (dust, pollen, road wear). The WHO suggests a daily average under 45&nbsp;µg/m³.</dd></div>
-          <div><dt>µg/m³</dt><dd>Micrograms of particles in each cubic metre of air.</dd></div>
-        </dl>
-      </details>
+      <div class="reading" id="reading" hidden>
+        <p class="scale">
+          <span class="mono scale-text" id="scale-text"></span>
+          <span class="scale-bar" id="scale-bar" role="img" aria-label=""><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        </p>
+        <p class="mono" id="main-pollutant"></p>
+        <p class="mono" id="pollen" hidden></p>
+        <details class="explain" id="explain">
+          <summary class="mono"><span id="explain-label">Why this answer?</span></summary>
+          <div class="explain-body">
+            <p class="explain-intro" id="explain-intro"></p>
+            <ul class="explain-rows" id="explain-rows" aria-label="Pollutants compared with WHO limits"></ul>
+            <p class="mono note">Values in µg/m³: micrograms per cubic metre of air. Limits are the WHO daily guidelines (8 hours for ozone).</p>
+            <p class="mono note" id="explain-other"></p>
+          </div>
+        </details>
+      </div>
       <p class="mono note" id="info-message" aria-live="polite"></p>
       <span id="spinner" class="visually-hidden" hidden>Loading</span>
     </div>
@@ -75,7 +81,7 @@
       </form>
       <button id="locate-btn" class="text-btn" type="button" hidden>
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/></svg>
-        Use my location
+        Use precise location
       </button>
     </div>
 

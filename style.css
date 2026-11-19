@@ -231,29 +231,78 @@ button:disabled { cursor: progress; opacity: .55; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
-/* ---------- "What's this?" explainer ---------- */
+/* ---------- Reading: index on its scale, main pollutant, "Why…?" panel ---------- */
 
-.explain[hidden] { display: none; }
+.reading[hidden], .reading [hidden] { display: none; }
+.reading { display: flex; flex-direction: column; gap: 4px; }
+
+.scale { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.scale-text { color: var(--ink); }
+.scale-bar { display: grid; grid-template-columns: repeat(6, 12px); gap: 3px; flex: none; }
+.scale-bar i { height: 10px; border: 1px solid var(--sub); border-radius: 2px; }
+/* Bands up to today's are filled; today's band is the accent colour. */
+.scale-bar[data-pos="1"] i:nth-child(-n+1),
+.scale-bar[data-pos="2"] i:nth-child(-n+2),
+.scale-bar[data-pos="3"] i:nth-child(-n+3),
+.scale-bar[data-pos="4"] i:nth-child(-n+4),
+.scale-bar[data-pos="5"] i:nth-child(-n+5),
+.scale-bar[data-pos="6"] i:nth-child(-n+6) { background: var(--sub); border-color: var(--sub); }
+.scale-bar[data-pos="1"] i:nth-child(1),
+.scale-bar[data-pos="2"] i:nth-child(2),
+.scale-bar[data-pos="3"] i:nth-child(3),
+.scale-bar[data-pos="4"] i:nth-child(4),
+.scale-bar[data-pos="5"] i:nth-child(5),
+.scale-bar[data-pos="6"] i:nth-child(6) { background: var(--accent); border-color: var(--accent); }
+
 .explain summary {
   display: inline-flex; align-items: center; gap: 6px;
-  min-height: 32px;
+  min-height: 36px;
   list-style: none;
   cursor: pointer;
   color: var(--ink);
-  text-decoration: underline; text-underline-offset: 4px;
 }
 .explain summary::-webkit-details-marker { display: none; }
-.explain summary::after { content: '+'; text-decoration: none; display: inline-block; }
-.explain[open] summary::after { content: '−'; }
-.explain-list {
-  margin: 8px 0 4px;
-  padding: 14px 0 0;
-  border-top: 1px solid var(--ink);
-  display: flex; flex-direction: column; gap: 10px;
+.explain summary::after {
+  content: '';
+  width: 7px; height: 7px;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform .2s ease;
 }
-.explain-list div { display: grid; grid-template-columns: 64px 1fr; gap: 12px; }
-.explain-list dt { font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 1.6; }
-.explain-list dd { margin: 0; font-size: 14px; line-height: 1.45; color: var(--sub); }
+.explain[open] summary::after { transform: translateY(2px) rotate(-135deg); }
+.explain summary span { text-decoration: underline; text-underline-offset: 4px; }
+
+.explain-body {
+  display: flex; flex-direction: column; gap: 14px;
+  margin-top: 6px; padding-top: 14px;
+  border-top: 1px solid var(--ink);
+}
+.explain-intro { font-size: 15px; line-height: 1.45; }
+
+.explain-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.explain-rows li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name value" "bar bar" "words words";
+  gap: 4px 12px;
+}
+.row-name { grid-area: name; font-size: 14px; }
+.row-name b { font-family: var(--font-mono); font-weight: 500; font-size: 13px; }
+.row-name small { color: var(--sub); font-size: 13px; }
+.row-value { grid-area: value; color: var(--ink); }
+.row-bar {
+  grid-area: bar;
+  position: relative; height: 6px; border-radius: 3px;
+  background: color-mix(in srgb, var(--sub) 25%, transparent);
+}
+/* The WHO limit sits in the middle of the bar. */
+.row-bar::after {
+  content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px;
+  background: var(--ink);
+}
+.row-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--sub); }
+.is-main .row-bar i { background: var(--accent); }
+.row-words { grid-area: words; font-size: 13px; color: var(--sub); }
 
 /* ---------- Morning alert setup (Apple only) ---------- */
 
