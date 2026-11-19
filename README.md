@@ -56,11 +56,27 @@ Open-Meteo is free for non-commercial use (about 10,000 calls a day) and its dat
 ├── script.js           DOM wiring (form, geolocation, rendering)
 ├── aqi.js              API calls, cache, validation, AQI interpretation (no DOM)
 ├── aqi.test.js         Unit tests for aqi.js
+├── platform.js         Detects iPhone/iPad/Mac (morning alert is Apple-only)
+├── shortcut/           Morning Air Apple Shortcut + its build script
 ├── share-card.js       Draws the share card as a PNG for the share sheet
 ├── share-card.test.js  Unit tests for share-card.js
 ├── script.test.js      Page tests (jsdom)
 ├── image-resources/    Images
 └── vitest.config.js
+```
+
+## Morning alert (Apple Shortcuts)
+The "Notify me" button is shown only on iPhone, iPad and Mac. It offers
+`shortcut/Morning Air.shortcut`, an Apple Shortcut that gets the device
+location, reads the European AQI from Open-Meteo and shows a notification such
+as "Air here today: Mostly breathable · EU AQI 52". Users run it daily with a
+Time of Day personal automation. No backend or account is needed.
+
+To change the Shortcut, edit `shortcut/build_shortcut.py` and rebuild on a Mac
+signed in to iCloud (Apple only imports signed Shortcuts):
+
+```sh
+python3 shortcut/build_shortcut.py
 ```
 
 ## Running locally

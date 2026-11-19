@@ -141,6 +141,47 @@ describe('page', () => {
     });
   });
 
+  describe('morning alert', () => {
+    function setUserAgent(userAgent, maxTouchPoints = 0) {
+      Object.defineProperty(navigator, 'userAgent', { value: userAgent, configurable: true });
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: maxTouchPoints, configurable: true });
+      Object.defineProperty(navigator, 'userAgentData', { value: undefined, configurable: true });
+    }
+
+    it('is hidden on Android', async () => {
+      setUserAgent('Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/131 Mobile Safari/537.36', 5);
+      await loadPage();
+      expect($('notify').hidden).toBe(true);
+    });
+
+    it('is hidden on Windows', async () => {
+      setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0');
+      await loadPage();
+      expect($('notify').hidden).toBe(true);
+    });
+
+    it('shows iPhone setup steps on iPhone', async () => {
+      setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) Mobile/15E148 Safari/604.1', 5);
+      await loadPage();
+      expect($('notify').hidden).toBe(false);
+      expect($('notify-steps').hidden).toBe(true);
+      $('notify-btn').click();
+      expect($('notify-steps').hidden).toBe(false);
+      expect($('notify-btn').getAttribute('aria-expanded')).toBe('true');
+      const visible = [...document.querySelectorAll('[data-only]')].filter((el) => !el.hidden);
+      expect(visible.every((el) => el.dataset.only === 'ios')).toBe(true);
+      expect(document.querySelector('#notify-steps a').getAttribute('href')).toBe('shortcut/Morning%20Air.shortcut');
+    });
+
+    it('shows Mac setup steps on a Mac', async () => {
+      setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/18.1 Safari/605.1.15');
+      await loadPage();
+      expect($('notify').hidden).toBe(false);
+      const visible = [...document.querySelectorAll('[data-only]')].filter((el) => !el.hidden);
+      expect(visible.every((el) => el.dataset.only === 'mac')).toBe(true);
+    });
+  });
+
   describe('page basics', () => {
     it('asks the full question in the heading', async () => {
       await loadPage();

@@ -79,11 +79,29 @@
       </button>
     </div>
 
-    <section class="alert" id="notify" aria-label="Morning alert">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-      <div><p class="t">Get a 7am heads-up</p><p class="s">Know before the school run or your run.</p></div>
-      <!-- Placeholder until the alert backend exists. -->
-      <a class="pill" href="#notify">Notify me</a>
+    <!-- Apple Shortcuts only: shown by script.js on iPhone, iPad and Mac. -->
+    <section class="alert-block" id="notify" aria-label="Morning alert" hidden>
+      <div class="alert">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <div><p class="t">Get a 7am heads-up</p><p class="s">Know before the school run or your run.</p></div>
+        <button class="pill" id="notify-btn" type="button" aria-expanded="false" aria-controls="notify-steps">Notify me</button>
+      </div>
+      <div class="notify-steps" id="notify-steps" hidden>
+        <p class="mono">Set up once with Apple Shortcuts. Free, no account.</p>
+        <ol>
+          <li>
+            <a class="pill" href="shortcut/Morning%20Air.shortcut" download="Morning Air.shortcut">Add the Morning Air shortcut</a>
+            <span class="hint" data-only="ios">Open the download and tap <b>Add Shortcut</b>.</span>
+            <span class="hint" data-only="mac">Open the download and click <b>Add Shortcut</b>.</span>
+          </li>
+          <li>Run it once from the Shortcuts app and allow <b>location</b> and <b>notifications</b>.</li>
+          <li>
+            In Shortcuts, open <b>Automation</b>, tap <b>+</b>, choose <b>Time of Day</b>, set <b>7:00</b> and <b>Daily</b>, pick <b>Run Immediately</b>, then choose <b>Morning Air</b>.
+          </li>
+        </ol>
+        <p class="mono note" data-only="ios">Needs iOS 17 or later to run without asking.</p>
+        <p class="mono note" data-only="mac">Needs macOS 26 Tahoe or later for automations.</p>
+      </div>
     </section>
 
     <section class="why" aria-label="Why use it">
